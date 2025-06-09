@@ -5,8 +5,11 @@ import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
+import FriendsPage from './pages/FriendsPage';
+
 
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useFriendStore } from './store/useFriendStore';
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 import { useEffect } from "react";
@@ -16,10 +19,20 @@ import { Toaster } from "react-hot-toast";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
+  const { subscribeToFriendRequests, unsubscribeFromFriendRequests } = useFriendStore();
   const { theme } = useThemeStore();
 
   console.log({ onlineUsers });
 
+  useEffect(() => {
+    if (authUser) {
+      subscribeToFriendRequests();
+      return () => {
+        unsubscribeFromFriendRequests();
+      };
+    }
+  }, [authUser, subscribeToFriendRequests, unsubscribeFromFriendRequests]);
+  
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -48,6 +61,7 @@ const App = () => {
         <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
         <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/friends" element={<FriendsPage />} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
       </Routes>
 

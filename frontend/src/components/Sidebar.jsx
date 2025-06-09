@@ -1,16 +1,21 @@
+// Update your existing Sidebar.jsx - just change the useEffect
 import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useFriendStore } from "../store/useFriendStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users, Search, Filter, MessageCircle } from "lucide-react";
+import { Users, Search, Filter, MessageCircle, UserPlus } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Sidebar = () => {
   const { getUsers, users, selectedUser, setSelectedUser, isUsersLoading } = useChatStore();
   const { onlineUsers } = useAuthStore();
+  const { friends } = useFriendStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
+    // Now gets friends only
     getUsers();
   }, [getUsers]);
 
@@ -34,7 +39,7 @@ const Sidebar = () => {
           <div className="hidden lg:block">
             <h2 className="text-lg font-bold text-base-content">Chats</h2>
             <p className="text-sm font-medium text-base-content/80">
-              {users.length} contacts
+              {users.length} friends
             </p>
           </div>
         </div>
@@ -53,7 +58,7 @@ const Sidebar = () => {
           </div>
         </div>
 
-        {/* Online Filter Toggle */}
+        {/* Online Filter & Add Friends */}
         <div className="hidden lg:flex items-center justify-between">
           <label className="label cursor-pointer p-0">
             <input
@@ -66,16 +71,14 @@ const Sidebar = () => {
               Online only
             </span>
           </label>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-success rounded-full"></div>
-            <span className="text-xs font-medium text-base-content/80">
-              {onlineUsers.length - 1} online
-            </span>
-          </div>
+          <Link to="/friends" className="btn btn-primary btn-xs">
+            <UserPlus className="w-3 h-3" />
+            Add Friends
+          </Link>
         </div>
 
-        {/* Mobile filter button */}
-        <div className="lg:hidden flex justify-center">
+        {/* Mobile buttons */}
+        <div className="lg:hidden flex justify-center gap-2">
           <button
             onClick={() => setShowOnlineOnly(!showOnlineOnly)}
             className={`btn btn-sm btn-circle ${
@@ -84,17 +87,37 @@ const Sidebar = () => {
           >
             <Filter className="w-4 h-4" />
           </button>
+          <Link to="/friends" className="btn btn-primary btn-sm btn-circle">
+            <UserPlus className="w-4 h-4" />
+          </Link>
         </div>
       </div>
 
-      {/* User List */}
+      {/* Friends List */}
       <div className="flex-1 overflow-y-auto">
         {filteredUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-center px-4">
-            <Users className="w-8 h-8 text-base-content/50 mb-2" />
-            <p className="text-sm font-medium text-base-content/70">
-              {searchTerm ? 'No users found' : 'No online users'}
-            </p>
+          <div className="flex flex-col items-center justify-center h-full text-center px-4">
+            {users.length === 0 ? (
+              // No friends at all
+              <>
+                <Users className="w-12 h-12 text-base-content/30 mb-3" />
+                <p className="text-sm font-medium text-base-content/70 mb-2">
+                  No friends to chat with
+                </p>
+                <Link to="/friends" className="btn btn-primary btn-sm">
+                  <UserPlus className="w-4 h-4" />
+                  Add Friends
+                </Link>
+              </>
+            ) : (
+              // Friends exist but filtered out
+              <>
+                <Search className="w-8 h-8 text-base-content/30 mb-2" />
+                <p className="text-sm text-base-content/70">
+                  {searchTerm ? 'No friends found' : 'No online friends'}
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-1 p-2">
@@ -120,10 +143,10 @@ const Sidebar = () => {
                   )}
                 </div>
 
-                {/* User Info - Desktop Only */}
+                {/* User Info */}
                 <div className="hidden lg:block flex-1 text-left min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className={`font-semibold text-sm truncate ${
+                    <h3 className={`font-bold text-sm truncate ${
                       selectedUser?._id === user._id
                         ? "text-primary-content"
                         : "text-base-content"
@@ -133,7 +156,7 @@ const Sidebar = () => {
                     {selectedUser?._id === user._id && (
                       <div className="w-2 h-2 bg-primary-content rounded-full"></div>
                     )}
-                  </div>
+                                    </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold ${
                       selectedUser?._id === user._id

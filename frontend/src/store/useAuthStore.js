@@ -98,6 +98,14 @@ export const useAuthStore = create((set, get) => ({
     socket.on("getOnlineUsers", (userIds) => {
       set({ onlineUsers: userIds });
     });
+    // Add friend request notifications
+    socket.on("friendRequestReceived", (data) => {
+      // Handle in useFriendStore
+    });
+
+    socket.on("friendRequestAccepted", (data) => {
+      // Handle in useFriendStore
+    });
   },
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();

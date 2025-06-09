@@ -4,12 +4,18 @@ import Message from "../models/message.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
+// Update getUsersForSidebar in controllers/message.controller.js
 export const getUsersForSidebar = async (req, res) => {
   try {
     const loggedInUserId = req.user._id;
-    const filteredUsers = await User.find({ _id: { $ne: loggedInUserId } }).select("-password");
+    
+    // Get user with populated friends
+    const user = await User.findById(loggedInUserId)
+      .populate('friends', '-password -friendRequests')
+      .select('friends');
 
-    res.status(200).json(filteredUsers);
+    // Return only friends, not all users
+    res.status(200).json(user.friends || []);
   } catch (error) {
     console.error("Error in getUsersForSidebar: ", error.message);
     res.status(500).json({ error: "Internal server error" });

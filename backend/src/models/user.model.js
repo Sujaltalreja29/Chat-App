@@ -1,3 +1,4 @@
+// models/user.model.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -20,6 +21,35 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // NEW: Friend System Fields
+    friends: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    friendRequests: {
+      sent: [{
+        to: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
+      }],
+      received: [{
+        from: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now
+        }
+      }]
+    }
   },
   { timestamps: true }
 );

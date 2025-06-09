@@ -1,3 +1,4 @@
+// store/useChatStore.js
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios";
@@ -5,21 +6,27 @@ import { useAuthStore } from "./useAuthStore";
 
 export const useChatStore = create((set, get) => ({
   messages: [],
-  users: [],
+  users: [], // Now will contain friends only
   selectedUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
 
-  getUsers: async () => {
+  // Renamed for clarity - this now gets friends only
+  getFriends: async () => {
     set({ isUsersLoading: true });
     try {
-      const res = await axiosInstance.get("/messages/users");
-      set({ users: res.data });
+      const res = await axiosInstance.get("/friends");
+      set({ users: res.data }); // Still using 'users' to maintain compatibility
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Failed to fetch friends");
     } finally {
       set({ isUsersLoading: false });
     }
+  },
+
+  // Keep legacy method for backward compatibility
+  getUsers: async () => {
+    return get().getFriends();
   },
 
   getMessages: async (userId) => {
@@ -28,35 +35,34 @@ export const useChatStore = create((set, get) => ({
       const res = await axiosInstance.get(`/messages/${userId}`);
       set({ messages: res.data });
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Failed to fetch messages");
     } finally {
       set({ isMessagesLoading: false });
     }
   },
- sendMessage: async (messageData) => {
-  const { selectedUser, messages } = get();
-  try {
-    // Build FormData
-    const formData = new FormData();
-    formData.append("text", messageData.text);
 
-    if (messageData.imageFile) {
-      formData.append("image", messageData.imageFile); // must be File, not base64 string
+  sendMessage: async (messageData) => {
+    const { selectedUser, messages } = get();
+    try {
+      const formData = new FormData();
+      formData.append("text", messageData.text);
+
+      if (messageData.imageFile) {
+        formData.append("image", messageData.imageFile);
+      }
+
+      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, formData, {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      set({ messages: [...messages, res.data] });
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send message");
     }
-
-    const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, formData, {
-      withCredentials: true,
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    set({ messages: [...messages, res.data] });
-  } catch (error) {
-    toast.error(error.response?.data?.message || "Failed to send message");
-  }
-},
-
+  },
 
   subscribeToMessages: () => {
     const { selectedUser } = get();
