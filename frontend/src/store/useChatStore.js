@@ -33,15 +33,30 @@ export const useChatStore = create((set, get) => ({
       set({ isMessagesLoading: false });
     }
   },
-  sendMessage: async (messageData) => {
-    const { selectedUser, messages } = get();
-    try {
-      const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
-      set({ messages: [...messages, res.data] });
-    } catch (error) {
-      toast.error(error.response.data.message);
+ sendMessage: async (messageData) => {
+  const { selectedUser, messages } = get();
+  try {
+    // Build FormData
+    const formData = new FormData();
+    formData.append("text", messageData.text);
+
+    if (messageData.imageFile) {
+      formData.append("image", messageData.imageFile); // must be File, not base64 string
     }
-  },
+
+    const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, formData, {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    set({ messages: [...messages, res.data] });
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Failed to send message");
+  }
+},
+
 
   subscribeToMessages: () => {
     const { selectedUser } = get();

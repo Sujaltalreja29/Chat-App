@@ -10,7 +10,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 import { useEffect } from "react";
-
+import ThemeProvider from './components/ThemeProvider';
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 
@@ -26,6 +26,11 @@ const App = () => {
 
   console.log({ authUser });
 
+  useEffect(() => {
+    // Apply theme on app initialization
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   if (isCheckingAuth && !authUser)
     return (
       <div className="flex items-center justify-center h-screen">
@@ -35,6 +40,7 @@ const App = () => {
 
   return (
     <div data-theme={theme}>
+      <ThemeProvider />
       <Navbar />
 
       <Routes>

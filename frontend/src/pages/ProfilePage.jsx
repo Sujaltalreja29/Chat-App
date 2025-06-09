@@ -1,98 +1,273 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
-import { Camera, Mail, User } from "lucide-react";
+import { Camera, Mail, User, Shield, Calendar, CheckCircle, Edit3, Save, X } from "lucide-react";
+import toast from "react-hot-toast";
 
 const ProfilePage = () => {
   const { authUser, isUpdatingProfile, updateProfile } = useAuthStore();
   const [selectedImg, setSelectedImg] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(authUser?.fullName || "");
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
 
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    const reader = new FileReader();
     reader.readAsDataURL(file);
 
     reader.onload = async () => {
       const base64Image = reader.result;
       setSelectedImg(base64Image);
-      await updateProfile({ profilePic: base64Image });
+      try {
+        await updateProfile({ profilePic: base64Image });
+        toast.success("Profile picture updated successfully!");
+      } catch (error) {
+        toast.error("Failed to update profile picture");
+        setSelectedImg(null);
+      }
     };
   };
 
+  const handleNameUpdate = async () => {
+    if (!editedName.trim()) {
+      toast.error("Name cannot be empty");
+      return;
+    }
+
+    try {
+      await updateProfile({ fullName: editedName.trim() });
+      setIsEditing(false);
+      toast.success("Name updated successfully!");
+    } catch (error) {
+      toast.error("Failed to update name");
+      setEditedName(authUser?.fullName || "");
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditedName(authUser?.fullName || "");
+    setIsEditing(false);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
-    <div className="h-screen pt-20">
-      <div className="max-w-2xl mx-auto p-4 py-8">
-        <div className="bg-base-300 rounded-xl p-6 space-y-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold ">Profile</h1>
-            <p className="mt-2">Your profile information</p>
-          </div>
+    <div className="min-h-screen bg-base-200 pt-16">
+      <div className="max-w-4xl mx-auto p-4 py-8">
+        
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-base-content mb-2">My Profile</h1>
+          <p className="text-base-content/70">Manage your account settings and preferences</p>
+        </div>
 
-          {/* avatar upload section */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          
+          {/* Profile Card */}
+          <div className="lg:col-span-2">
+            <div className="card bg-base-100 shadow-xl border border-base-300">
+              <div className="card-body">
+                
+                {/* Avatar Section */}
+                <div className="flex flex-col items-center mb-8">
+                  <div className="relative group">
+                    <img
+                      src={selectedImg || authUser?.profilePic || "/avatar.png"}
+                      alt="Profile"
+                      className="w-32 h-32 rounded-full object-cover border-4 border-base-300 shadow-lg"
+                    />
+                    
+                    {/* Camera Overlay */}
+                    <label
+                      htmlFor="avatar-upload"
+                      className={`absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer ${
+                        isUpdatingProfile ? "animate-pulse pointer-events-none" : ""
+                      }`}
+                    >
+                      <Camera className="w-8 h-8 text-white" />
+                      <input
+                        type="file"
+                        id="avatar-upload"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={isUpdatingProfile}
+                      />
+                    </label>
 
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <img
-                src={selectedImg || authUser.profilePic || "/avatar.png"}
-                alt="Profile"
-                className="size-32 rounded-full object-cover border-4 "
-              />
-              <label
-                htmlFor="avatar-upload"
-                className={`
-                  absolute bottom-0 right-0 
-                  bg-base-content hover:scale-105
-                  p-2 rounded-full cursor-pointer 
-                  transition-all duration-200
-                  ${isUpdatingProfile ? "animate-pulse pointer-events-none" : ""}
-                `}
-              >
-                <Camera className="w-5 h-5 text-base-200" />
-                <input
-                  type="file"
-                  id="avatar-upload"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  disabled={isUpdatingProfile}
-                />
-              </label>
+                    {/* Upload Button */}
+                    <label
+                      htmlFor="avatar-upload"
+                      className={`absolute -bottom-2 -right-2 btn btn-primary btn-circle btn-sm cursor-pointer shadow-lg ${
+                        isUpdatingProfile ? "loading" : ""
+                      }`}
+                    >
+                      <Camera className="w-4 h-4" />
+                    </label>
+                  </div>
+
+                  <p className="text-sm text-base-content/60 mt-3 text-center">
+                    {isUpdatingProfile ? (
+                      <span className="flex items-center gap-2">
+                        <span className="loading loading-spinner loading-xs"></span>
+                        Uploading...
+                      </span>
+                    ) : (
+                      "Click the camera icon to update your photo"
+                    )}
+                  </p>
+                </div>
+
+                {/* Profile Information */}
+                <div className="space-y-6">
+                  
+                  {/* Full Name */}
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Full Name
+                      </span>
+                    </label>
+                    
+                    {isEditing ? (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={editedName}
+                          onChange={(e) => setEditedName(e.target.value)}
+                          className="input input-bordered flex-1"
+                          placeholder="Enter your full name"
+                        />
+                        <button onClick={handleNameUpdate} className="btn btn-success btn-square">
+                          <Save className="w-4 h-4" />
+                        </button>
+                        <button onClick={cancelEdit} className="btn btn-error btn-square">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between input input-bordered">
+                        <span className="text-base-content font-medium">
+                          {authUser?.fullName}
+                        </span>
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="btn btn-ghost btn-sm btn-square"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Email */}
+                  <div className="form-control">
+                    <label className="label">
+                      <span className="label-text flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        Email Address
+                      </span>
+                    </label>
+                    <div className="input input-bordered flex items-center">
+                      <span className="text-base-content">{authUser?.email}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-zinc-400">
-              {isUpdatingProfile ? "Uploading..." : "Click the camera icon to update your photo"}
-            </p>
           </div>
 
+          {/* Sidebar */}
           <div className="space-y-6">
-            <div className="space-y-1.5">
-              <div className="text-sm text-zinc-400 flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Full Name
+            
+            {/* Account Status */}
+            <div className="card bg-base-100 shadow-xl border border-base-300">
+              <div className="card-body">
+                <h3 className="card-title text-base-content mb-4 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-primary" />
+                  Account Status
+                </h3>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-base-content/70">Status</span>
+                    <div className="badge badge-success gap-2">
+                      <CheckCircle className="w-3 h-3" />
+                      Active
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-base-content/70">Verification</span>
+                    <div className="badge badge-success gap-2">
+                      <CheckCircle className="w-3 h-3" />
+                      Verified
+                    </div>
+                  </div>
+                </div>
               </div>
-              <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.fullName}</p>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="text-sm text-zinc-400 flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Email Address
+            {/* Account Details */}
+            <div className="card bg-base-100 shadow-xl border border-base-300">
+              <div className="card-body">
+                <h3 className="card-title text-base-content mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  Account Details
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-sm text-base-content/70">Member Since</span>
+                    <p className="text-base-content font-medium">
+                      {authUser?.createdAt ? formatDate(authUser.createdAt) : 'N/A'}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm text-base-content/70">Account ID</span>
+                    <p className="text-base-content font-mono text-sm">
+                      {authUser?._id?.slice(-8).toUpperCase() || 'N/A'}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="px-4 py-2.5 bg-base-200 rounded-lg border">{authUser?.email}</p>
             </div>
-          </div>
 
-          <div className="mt-6 bg-base-300 rounded-xl p-6">
-            <h2 className="text-lg font-medium  mb-4">Account Information</h2>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between py-2 border-b border-zinc-700">
-                <span>Member Since</span>
-                <span>{authUser.createdAt?.split("T")[0]}</span>
-              </div>
-              <div className="flex items-center justify-between py-2">
-                <span>Account Status</span>
-                <span className="text-green-500">Active</span>
+                        {/* Quick Actions */}
+            <div className="card bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 shadow-xl">
+              <div className="card-body">
+                <h3 className="card-title text-base-content mb-4">Quick Actions</h3>
+                
+                <div className="space-y-2">
+                  <button className="btn btn-ghost w-full justify-start">
+                    Privacy Settings
+                  </button>
+                  <button className="btn btn-ghost w-full justify-start">
+                    Notification Preferences
+                  </button>
+                  <button className="btn btn-ghost w-full justify-start">
+                    Download Data
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -101,4 +276,5 @@ const ProfilePage = () => {
     </div>
   );
 };
+
 export default ProfilePage;
