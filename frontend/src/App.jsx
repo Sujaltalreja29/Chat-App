@@ -6,10 +6,12 @@ import LoginPage from "./pages/LoginPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import FriendsPage from './pages/FriendsPage';
-
+import GroupsPage from './pages/GroupsPage';
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useFriendStore } from './store/useFriendStore';
+import { useGroupStore } from './store/useGroupStore';
+import { useChatStore } from './store/useChatStore';
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 import { useEffect } from "react";
@@ -19,10 +21,19 @@ import { Toaster } from "react-hot-toast";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
+  const { getMyGroups } = useGroupStore();
+  const { getGroups } = useChatStore();
   const { subscribeToFriendRequests, unsubscribeFromFriendRequests } = useFriendStore();
   const { theme } = useThemeStore();
 
   console.log({ onlineUsers });
+
+    useEffect(() => {
+    if (authUser) {
+      getMyGroups();
+      getGroups();
+    }
+  }, [authUser, getMyGroups, getGroups]);
 
   useEffect(() => {
     if (authUser) {
@@ -62,6 +73,7 @@ const App = () => {
         <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/friends" element={<FriendsPage />} />
+        <Route path="/groups" element={<GroupsPage />} />
         <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
       </Routes>
 

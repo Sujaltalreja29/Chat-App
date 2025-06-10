@@ -2,7 +2,7 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useFriendStore } from "../store/useFriendStore";
-import { LogOut, MessageSquare, Settings, User, Bell, Search, Users } from "lucide-react";
+import { LogOut, MessageSquare, Settings, User, Bell, Search, Users, Hash } from "lucide-react";
 import { useEffect } from "react";
 
 const Navbar = () => {
@@ -21,7 +21,7 @@ const Navbar = () => {
     <header className="bg-base-100 border-b border-base-300 fixed w-full top-0 z-50 backdrop-blur-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          
+
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity duration-200">
             <div className="w-8 h-8 rounded-lg bg-primary text-primary-content flex items-center justify-center shadow-sm">
@@ -49,7 +49,10 @@ const Navbar = () => {
                 <button className="md:hidden btn btn-ghost btn-circle">
                   <Search className="w-5 h-5" />
                 </button>
-
+                <Link to="/groups" className="btn btn-ghost">
+                  <Hash className="w-4 h-4" />
+                  <span className="hidden sm:inline">Groups</span>
+                </Link>
                 {/* Friends Page */}
                 <Link to="/friends" className="btn btn-ghost relative">
                   <Users className="w-5 h-5" />
@@ -86,7 +89,7 @@ const Navbar = () => {
                   <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm font-medium shadow-sm">
                     {authUser.fullName?.charAt(0).toUpperCase() || 'U'}
                   </div>
-                  
+
                   <button
                     onClick={logout}
                     className="btn btn-ghost text-error"

@@ -49,8 +49,13 @@ const userSchema = new mongoose.Schema(
           default: Date.now
         }
       }]
-    }
+    },
+    groups: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Group'
+    }]
   },
+  
   { timestamps: true }
 );
 

@@ -1,3 +1,4 @@
+// Update your existing ChatContainer.jsx to support groups
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef } from "react";
 import ChatHeader from "./ChatHeader";
@@ -5,7 +6,7 @@ import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
-import { CheckCheck, MessageSquare } from "lucide-react";
+import { CheckCheck, MessageSquare, Hash } from "lucide-react";
 
 const ChatContainer = () => {
   const {
@@ -13,17 +14,25 @@ const ChatContainer = () => {
     getMessages,
     isMessagesLoading,
     selectedUser,
+    selectedGroup,
     subscribeToMessages,
     unsubscribeFromMessages,
+    chatType
   } = useChatStore();
+  
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
 
   useEffect(() => {
-    getMessages(selectedUser._id);
+    if (chatType === 'direct' && selectedUser && messages.length === 0) {
+      getMessages(selectedUser._id, 'direct');
+    } else if (chatType === 'group' && selectedGroup && messages.length === 0) {
+      getMessages(selectedGroup._id, 'group');
+    }
+
     subscribeToMessages();
     return () => unsubscribeFromMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser, selectedGroup, chatType]);
 
   useEffect(() => {
     if (messageEndRef.current && messages) {
@@ -54,21 +63,32 @@ const ChatContainer = () => {
           /* Empty State */
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-16 h-16 bg-base-300 rounded-full flex items-center justify-center mb-4">
-              <MessageSquare className="w-8 h-8 text-base-content/50" />
+              {chatType === 'group' ? (
+                <Hash className="w-8 h-8 text-base-content/50" />
+              ) : (
+                <MessageSquare className="w-8 h-8 text-base-content/50" />
+              )}
             </div>
             <h3 className="text-lg font-semibold text-base-content mb-2">
               No messages yet
             </h3>
             <p className="text-base-content/70 max-w-sm">
-              Start the conversation with <span className="font-medium text-base-content">{selectedUser.fullName}</span>
+              {chatType === 'group' && selectedGroup ? (
+                <>Start the conversation in <span className="font-medium text-base-content">{selectedGroup.name}</span></>
+              ) : selectedUser ? (
+                <>Start the conversation with <span className="font-medium text-base-content">{selectedUser.fullName}</span></>
+              ) : (
+                'Select a chat to start messaging'
+              )}
             </p>
           </div>
         ) : (
           /* Messages List */
           <div className="space-y-4">
             {messages.map((message, index) => {
-              const isOwn = message.senderId === authUser._id;
-              const showAvatar = index === 0 || messages[index - 1].senderId !== message.senderId;
+              const isOwn = message.senderId._id === authUser._id;
+              const showAvatar = index === 0 || messages[index - 1].senderId._id !== message.senderId._id;
+              const showSenderName = chatType === 'group' && !isOwn && showAvatar;
 
               return (
                 <div
@@ -80,8 +100,8 @@ const ChatContainer = () => {
                     <div className="flex-shrink-0 self-end">
                       {showAvatar ? (
                         <img
-                          src={selectedUser.profilePic || "/avatar.png"}
-                          alt={selectedUser.fullName}
+                          src={message.senderId.profilePic || "/avatar.png"}
+                          alt={message.senderId.fullName}
                           className="w-8 h-8 rounded-full object-cover border-2 border-base-100 shadow-sm"
                         />
                       ) : (
@@ -93,11 +113,11 @@ const ChatContainer = () => {
                   {/* Message Content */}
                   <div className={`flex flex-col max-w-[75%] sm:max-w-[60%] ${isOwn ? 'items-end' : 'items-start'}`}>
                     
-                    {/* Sender Name */}
-                    {!isOwn && showAvatar && (
+                    {/* Sender Name for Groups */}
+                    {showSenderName && (
                       <div className="mb-1 ml-2">
                         <span className="text-xs font-semibold text-base-content/80">
-                          {selectedUser.fullName}
+                          {message.senderId.fullName}
                         </span>
                       </div>
                     )}
