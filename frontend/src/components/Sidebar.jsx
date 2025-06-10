@@ -1,4 +1,4 @@
-// Update your existing Sidebar.jsx to include groups
+// Update your existing Sidebar.jsx with notification features
 import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
@@ -6,9 +6,10 @@ import { useFriendStore } from "../store/useFriendStore";
 import { useGroupStore } from "../store/useGroupStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
 import CreateGroup from "./CreateGroup";
+import DefaultGroupIcon from "./DefaultGroupIcon";
 import { 
   Users, Search, Filter, MessageCircle, UserPlus, 
-  Plus, Hash, Crown, User
+  Plus, Hash, Crown, User, Camera, File
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -16,16 +17,16 @@ const Sidebar = () => {
   const { 
     getUsers, users, selectedUser, setSelectedUser, 
     selectedGroup, setSelectedGroup, getGroups, groups,
-    isUsersLoading, isGroupsLoading, chatType 
+    isUsersLoading, isGroupsLoading, chatType, totalUnreadCount
   } = useChatStore();
   
-  const { onlineUsers } = useAuthStore();
+  const { onlineUsers, authUser } = useAuthStore();
   const { friends } = useFriendStore();
   const { getMyGroups } = useGroupStore();
   
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState('chats'); // 'chats' or 'groups'
+  const [activeTab, setActiveTab] = useState('chats');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   useEffect(() => {
@@ -33,6 +34,54 @@ const Sidebar = () => {
     getGroups();
     getMyGroups();
   }, [getUsers, getGroups, getMyGroups]);
+
+  // 🔥 NEW: Helper function to format last message
+  const formatLastMessage = (lastMessage, isGroup = false) => {
+    if (!lastMessage) return '';
+    
+    const isOwn = lastMessage.senderId._id === authUser?._id;
+    const senderName = isOwn ? 'You' : (isGroup ? lastMessage.senderId.fullName : '');
+    
+    let messageText = '';
+    if (lastMessage.image) {
+      messageText = '📷 Photo';
+    } else if (lastMessage.text) {
+      messageText = lastMessage.text.length > 30 
+        ? lastMessage.text.substring(0, 30) + '...' 
+        : lastMessage.text;
+    }
+    
+    return isGroup 
+      ? `${senderName}: ${messageText}`
+      : messageText;
+  };
+
+  // 🔥 NEW: Helper function to format time
+  const formatTime = (date) => {
+    if (!date) return '';
+    
+    const now = new Date();
+    const messageDate = new Date(date);
+    const diffTime = now - messageDate;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return messageDate.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return messageDate.toLocaleDateString('en-US', { weekday: 'short' });
+    } else {
+      return messageDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+  };
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.fullName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -49,7 +98,6 @@ const Sidebar = () => {
   };
 
   const handleGroupSelect = (group) => {
-    console.log("Selecting group:", group); // Add this for debugging
     setSelectedGroup(group);
   };
 
@@ -62,8 +110,14 @@ const Sidebar = () => {
         {/* Header with Tabs */}
         <div className="p-4 border-b border-base-300">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 bg-primary text-primary-content rounded-lg flex items-center justify-center lg:w-10 lg:h-10">
+            <div className="w-8 h-8 bg-primary text-primary-content rounded-lg flex items-center justify-center lg:w-10 lg:h-10 relative">
               <MessageCircle className="w-5 h-5 lg:w-6 lg:h-6" />
+              {/* 🔥 NEW: Total unread badge */}
+              {totalUnreadCount > 0 && (
+                <div className="absolute -top-2 -right-2 w-5 h-5 bg-error text-error-content text-xs font-bold rounded-full flex items-center justify-center">
+                                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                </div>
+              )}
             </div>
             <div className="hidden lg:block">
               <h2 className="text-lg font-bold text-base-content">Chatty</h2>
@@ -82,8 +136,11 @@ const Sidebar = () => {
               >
                 <User className="w-4 h-4 mr-2" />
                 Chats
-                {users.length > 0 && (
-                  <div className="badge badge-sm ml-2">{users.length}</div>
+                {/* 🔥 NEW: Unread count for chats */}
+                {users.reduce((sum, user) => sum + (user.unreadCount || 0), 0) > 0 && (
+                  <div className="badge badge-error badge-sm ml-2 text-white">
+                    {users.reduce((sum, user) => sum + (user.unreadCount || 0), 0)}
+                  </div>
                 )}
               </button>
               <button
@@ -92,8 +149,11 @@ const Sidebar = () => {
               >
                 <Hash className="w-4 h-4 mr-2" />
                 Groups
-                {groups.length > 0 && (
-                  <div className="badge badge-sm ml-2">{groups.length}</div>
+                {/* 🔥 NEW: Unread count for groups */}
+                {groups.reduce((sum, group) => sum + (group.unreadCount || 0), 0) > 0 && (
+                  <div className="badge badge-error badge-sm ml-2 text-white">
+                    {groups.reduce((sum, group) => sum + (group.unreadCount || 0), 0)}
+                  </div>
                 )}
               </button>
             </div>
@@ -103,15 +163,27 @@ const Sidebar = () => {
           <div className="lg:hidden flex justify-center gap-2 mb-4">
             <button
               onClick={() => setActiveTab('chats')}
-              className={`btn btn-sm ${activeTab === 'chats' ? 'btn-primary' : 'btn-ghost'}`}
+              className={`btn btn-sm relative ${activeTab === 'chats' ? 'btn-primary' : 'btn-ghost'}`}
             >
               <User className="w-4 h-4" />
+              {/* Mobile unread badge for chats */}
+              {users.reduce((sum, user) => sum + (user.unreadCount || 0), 0) > 0 && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {users.reduce((sum, user) => sum + (user.unreadCount || 0), 0) > 9 ? '9+' : users.reduce((sum, user) => sum + (user.unreadCount || 0), 0)}
+                </div>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('groups')}
-              className={`btn btn-sm ${activeTab === 'groups' ? 'btn-primary' : 'btn-ghost'}`}
+              className={`btn btn-sm relative ${activeTab === 'groups' ? 'btn-primary' : 'btn-ghost'}`}
             >
               <Hash className="w-4 h-4" />
+              {/* Mobile unread badge for groups */}
+              {groups.reduce((sum, group) => sum + (group.unreadCount || 0), 0) > 0 && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {groups.reduce((sum, group) => sum + (group.unreadCount || 0), 0) > 9 ? '9+' : groups.reduce((sum, group) => sum + (group.unreadCount || 0), 0)}
+                </div>
+              )}
             </button>
             <button
               onClick={() => setShowCreateGroup(true)}
@@ -200,51 +272,100 @@ const Sidebar = () => {
               </div>
             ) : (
               <div className="space-y-1 p-2">
-                {filteredUsers.map((user) => (
-                  <button
-                    key={user._id}
-                    onClick={() => handleUserSelect(user)}
-                    className={`w-full p-3 flex items-center gap-3 rounded-lg transition-all duration-200 ${
-                      selectedUser?._id === user._id && chatType === 'direct'
-                        ? "bg-primary text-primary-content shadow-md"
-                        : "hover:bg-base-200 text-base-content"
-                    }`}
-                  >
-                    {/* Avatar */}
-                    <div className="relative flex-shrink-0">
-                      <img
-                        src={user.profilePic || "/avatar.png"}
-                        alt={user.fullName}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-base-300"
-                      />
-                      {onlineUsers.includes(user._id) && (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success border-2 border-base-100 rounded-full"></div>
-                      )}
-                    </div>
+                {filteredUsers.map((user) => {
+                  const isSelected = selectedUser?._id === user._id && chatType === 'direct';
+                  const hasUnread = user.unreadCount > 0;
+                  
+                  return (
+                    <button
+                      key={user._id}
+                      onClick={() => handleUserSelect(user)}
+                      className={`w-full p-3 flex items-center gap-3 rounded-lg transition-all duration-200 relative ${
+                        isSelected
+                          ? "bg-primary text-primary-content shadow-md"
+                          : hasUnread
+                          ? "bg-base-200 hover:bg-base-300"
+                          : "hover:bg-base-200 text-base-content"
+                      }`}
+                    >
+                      {/* Avatar */}
+                      <div className="relative flex-shrink-0">
+                        <img
+                          src={user.profilePic || "/avatar.png"}
+                          alt={user.fullName}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-base-300"
+                        />
+                        {/* Online Status */}
+                        {onlineUsers.includes(user._id) && (
+                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success border-2 border-base-100 rounded-full"></div>
+                        )}
+                        {/* 🔥 NEW: Unread Badge on Avatar */}
+                        {hasUnread && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center">
+                            {user.unreadCount > 99 ? '99+' : user.unreadCount}
+                          </div>
+                        )}
+                      </div>
 
-                    {/* User Info */}
-                    <div className="hidden lg:block flex-1 text-left min-w-0">
-                      <h3 className={`font-bold text-sm truncate ${
-                        selectedUser?._id === user._id && chatType === 'direct'
-                          ? "text-primary-content"
-                          : "text-base-content"
-                      }`}>
-                        {user.fullName}
-                      </h3>
-                      <span className={`text-xs font-bold ${
-                        selectedUser?._id === user._id && chatType === 'direct'
-                          ? onlineUsers.includes(user._id)
-                            ? 'text-primary-content'
-                            : 'text-primary-content/80'
-                          : onlineUsers.includes(user._id)
-                          ? 'text-success font-extrabold'
-                          : 'text-base-content/70'
-                      }`}>
-                        {onlineUsers.includes(user._id) ? '● Online' : 'Offline'}
-                      </span>
-                    </div>
-                  </button>
-                ))}
+                      {/* User Info */}
+                      <div className="hidden lg:block flex-1 text-left min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className={`font-bold text-sm truncate ${
+                            isSelected
+                              ? "text-primary-content"
+                              : hasUnread
+                              ? "text-base-content"
+                              : "text-base-content"
+                          }`}>
+                            {user.fullName}
+                          </h3>
+                          {/* 🔥 NEW: Time stamp */}
+                          {user.lastMessage && (
+                            <span className={`text-xs ${
+                              isSelected
+                                ? "text-primary-content/70"
+                                : "text-base-content/60"
+                            }`}>
+                              {formatTime(user.lastMessage.createdAt)}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* 🔥 NEW: Last Message Preview */}
+                        {user.lastMessage ? (
+                          <p className={`text-xs truncate ${
+                            isSelected
+                              ? "text-primary-content/80"
+                              : hasUnread
+                              ? "text-base-content font-medium"
+                              : "text-base-content/70"
+                          }`}>
+                            {formatLastMessage(user.lastMessage)}
+                          </p>
+                        ) : (
+                          <span className={`text-xs ${
+                            isSelected
+                              ? onlineUsers.includes(user._id)
+                                ? 'text-primary-content/80'
+                                : 'text-primary-content/70'
+                              : onlineUsers.includes(user._id)
+                              ? 'text-success font-medium'
+                              : 'text-base-content/70'
+                          }`}>
+                            {onlineUsers.includes(user._id) ? '● Online' : 'Offline'}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 🔥 NEW: Desktop Unread Badge */}
+                      {hasUnread && (
+                        <div className="hidden lg:flex w-5 h-5 bg-error text-white text-xs font-bold rounded-full items-center justify-center flex-shrink-0">
+                          {user.unreadCount > 99 ? '99+' : user.unreadCount}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )
           ) : (
@@ -278,51 +399,104 @@ const Sidebar = () => {
               <div className="space-y-1 p-2">
                 {filteredGroups.map((group) => {
                   const memberCount = group.members?.length || 0;
-                  const isAdmin = group.members?.some(member => 
-                    member.user._id === selectedUser?._id && member.role === 'admin'
+                  const isSelected = selectedGroup?._id === group._id && chatType === 'group';
+                  const hasUnread = group.unreadCount > 0;
+                  const userMember = group.members?.find(member => 
+                    member.user._id === authUser?._id
                   );
+                  const isAdmin = userMember?.role === 'admin';
 
                   return (
                     <button
                       key={group._id}
                       onClick={() => handleGroupSelect(group)}
-                      className={`w-full p-3 flex items-center gap-3 rounded-lg transition-all duration-200 ${
-                        selectedGroup?._id === group._id && chatType === 'group'
+                      className={`w-full p-3 flex items-center gap-3 rounded-lg transition-all duration-200 relative ${
+                        isSelected
                           ? "bg-primary text-primary-content shadow-md"
+                          : hasUnread
+                          ? "bg-base-200 hover:bg-base-300"
                           : "hover:bg-base-200 text-base-content"
                       }`}
                     >
                       {/* Group Avatar */}
                       <div className="relative flex-shrink-0">
-                        <img
-                          src={group.groupPic || "avatar.png"}
-                          alt={group.name}
-                          className="w-12 h-12 rounded-full object-cover border-2 border-base-300"
-                        />
+                        {group.groupPic ? (
+                          <img
+                            src={group.groupPic}
+                            alt={group.name}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-base-300"
+                          />
+                        ) : (
+                          <DefaultGroupIcon className="w-12 h-12" iconClassName="w-5 h-5" />
+                        )}
+                        
+                        {/* Admin Badge */}
                         {isAdmin && (
                           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-warning border-2 border-base-100 rounded-full flex items-center justify-center">
                             <Crown className="w-2 h-2 text-warning-content" />
+                          </div>
+                        )}
+                        
+                        {/* 🔥 NEW: Unread Badge on Avatar */}
+                        {hasUnread && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center">
+                            {group.unreadCount > 99 ? '99+' : group.unreadCount}
                           </div>
                         )}
                       </div>
 
                       {/* Group Info */}
                       <div className="hidden lg:block flex-1 text-left min-w-0">
-                        <h3 className={`font-bold text-sm truncate ${
-                          selectedGroup?._id === group._id && chatType === 'group'
-                            ? "text-primary-content"
-                            : "text-base-content"
-                        }`}>
-                          {group.name}
-                        </h3>
-                        <p className={`text-xs ${
-                          selectedGroup?._id === group._id && chatType === 'group'
-                            ? "text-primary-content/80"
-                            : "text-base-content/70"
-                        }`}>
-                          {memberCount} member{memberCount !== 1 ? 's' : ''}
-                        </p>
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className={`font-bold text-sm truncate ${
+                            isSelected
+                              ? "text-primary-content"
+                              : hasUnread
+                              ? "text-base-content"
+                              : "text-base-content"
+                          }`}>
+                            {group.name}
+                          </h3>
+                          {/* 🔥 NEW: Time stamp */}
+                          {group.lastMessage && (
+                            <span className={`text-xs ${
+                              isSelected
+                                ? "text-primary-content/70"
+                                : "text-base-content/60"
+                            }`}>
+                              {formatTime(group.lastMessage.createdAt)}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* 🔥 NEW: Last Message Preview */}
+                        {group.lastMessage ? (
+                          <p className={`text-xs truncate ${
+                            isSelected
+                              ? "text-primary-content/80"
+                              : hasUnread
+                              ? "text-base-content font-medium"
+                              : "text-base-content/70"
+                          }`}>
+                            {formatLastMessage(group.lastMessage, true)}
+                          </p>
+                        ) : (
+                          <p className={`text-xs ${
+                            isSelected
+                              ? "text-primary-content/80"
+                              : "text-base-content/70"
+                          }`}>
+                            {memberCount} member{memberCount !== 1 ? 's' : ''}
+                          </p>
+                        )}
                       </div>
+
+                      {/* 🔥 NEW: Desktop Unread Badge */}
+                      {hasUnread && (
+                        <div className="hidden lg:flex w-5 h-5 bg-error text-white text-xs font-bold rounded-full items-center justify-center flex-shrink-0">
+                          {group.unreadCount > 99 ? '99+' : group.unreadCount}
+                        </div>
+                      )}
                     </button>
                   );
                 })}

@@ -20,20 +20,43 @@ import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 
 const App = () => {
-  const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
+  const { authUser, checkAuth, isCheckingAuth, onlineUsers, socket } = useAuthStore(); // 🔥 ADD socket
   const { getMyGroups } = useGroupStore();
-  const { getGroups } = useChatStore();
+  const { getGroups, subscribeToMessages, unsubscribeFromMessages } = useChatStore(); // 🔥 ADD socket functions
   const { subscribeToFriendRequests, unsubscribeFromFriendRequests } = useFriendStore();
   const { theme } = useThemeStore();
 
   console.log({ onlineUsers });
 
-    useEffect(() => {
+  useEffect(() => {
     if (authUser) {
       getMyGroups();
       getGroups();
     }
   }, [authUser, getMyGroups, getGroups]);
+
+  // 🔥 NEW: Subscribe to message socket events
+useEffect(() => {
+  if (authUser && socket) {
+    console.log("🔌 App: Socket state changed, socket connected:", socket.connected);
+    
+    // Subscribe when socket becomes available and connected
+    if (socket.connected) {
+      subscribeToMessages();
+    } else {
+      // Wait for socket to connect
+      socket.on("connect", () => {
+        console.log("🔌 App: Socket connected, subscribing to messages");
+        subscribeToMessages();
+      });
+    }
+    
+    return () => {
+      console.log("🔌 App: Unsubscribing from messages");
+      unsubscribeFromMessages();
+    };
+  }
+}, [authUser, socket?.connected, subscribeToMessages, unsubscribeFromMessages]); 
 
   useEffect(() => {
     if (authUser) {
@@ -74,7 +97,7 @@ const App = () => {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/friends" element={<FriendsPage />} />
         <Route path="/groups" element={<GroupsPage />} />
-        <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/login" />} />
+        <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/" />} />
       </Routes>
 
       <Toaster />
