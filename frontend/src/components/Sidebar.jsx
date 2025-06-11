@@ -7,6 +7,7 @@ import { useGroupStore } from "../store/useGroupStore";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
 import CreateGroup from "./CreateGroup";
 import DefaultGroupIcon from "./DefaultGroupIcon";
+import { formatLastMessage, formatMessageTime } from '../utils/messageFormatters';
 import { 
   Users, Search, Filter, MessageCircle, UserPlus, 
   Plus, Hash, Crown, User, Camera, File
@@ -36,25 +37,57 @@ const Sidebar = () => {
   }, [getUsers, getGroups, getMyGroups]);
 
   // 🔥 NEW: Helper function to format last message
-  const formatLastMessage = (lastMessage, isGroup = false) => {
-    if (!lastMessage) return '';
+// 🔥 ENHANCED: Updated formatLastMessage function to handle files
+const formatLastMessage = (lastMessage, isGroup = false) => {
+  if (!lastMessage) return '';
+  
+  const isOwn = lastMessage.senderId._id === authUser?._id;
+  const senderName = isOwn ? 'You' : (isGroup ? lastMessage.senderId.fullName : '');
+  
+  let messageText = '';
+  
+  // 🔥 NEW: Handle file uploads
+  if (lastMessage.file) {
+    const fileType = lastMessage.file.fileType;
+    const fileName = lastMessage.file.originalName;
     
-    const isOwn = lastMessage.senderId._id === authUser?._id;
-    const senderName = isOwn ? 'You' : (isGroup ? lastMessage.senderId.fullName : '');
-    
-    let messageText = '';
-    if (lastMessage.image) {
-      messageText = '📷 Photo';
-    } else if (lastMessage.text) {
-      messageText = lastMessage.text.length > 30 
-        ? lastMessage.text.substring(0, 30) + '...' 
-        : lastMessage.text;
+    switch (fileType) {
+      case 'image':
+        messageText = '📷 Photo';
+        break;
+      case 'video':
+        messageText = '🎬 Video';
+        break;
+      case 'audio':
+        messageText = '🎵 Audio';
+        break;
+      case 'document':
+        messageText = '📄 Document';
+        break;
+      default:
+        messageText = '📎 File';
     }
     
-    return isGroup 
-      ? `${senderName}: ${messageText}`
-      : messageText;
-  };
+    // Add file name if it's short enough
+    if (fileName && fileName.length <= 20) {
+      messageText += `: ${fileName}`;
+    }
+  }
+  // Legacy image support
+  else if (lastMessage.image) {
+    messageText = '📷 Photo';
+  }
+  // Text message
+  else if (lastMessage.text) {
+    messageText = lastMessage.text.length > 30 
+      ? lastMessage.text.substring(0, 30) + '...' 
+      : lastMessage.text;
+  }
+  
+  return isGroup 
+    ? `${senderName}: ${messageText}`
+    : messageText;
+};
 
   // 🔥 NEW: Helper function to format time
   const formatTime = (date) => {
@@ -326,7 +359,7 @@ const Sidebar = () => {
                                 ? "text-primary-content/70"
                                 : "text-base-content/60"
                             }`}>
-                              {formatTime(user.lastMessage.createdAt)}
+                              {formatMessageTime(user.lastMessage.createdAt)}
                             </span>
                           )}
                         </div>
@@ -340,7 +373,7 @@ const Sidebar = () => {
                               ? "text-base-content font-medium"
                               : "text-base-content/70"
                           }`}>
-                            {formatLastMessage(user.lastMessage)}
+                            {formatLastMessage(user.lastMessage, false, authUser?._id)}
                           </p>
                         ) : (
                           <span className={`text-xs ${
@@ -422,7 +455,7 @@ const Sidebar = () => {
                       <div className="relative flex-shrink-0">
                         {group.groupPic ? (
                           <img
-                            src={group.groupPic}
+                            src={avatar.png}
                             alt={group.name}
                             className="w-12 h-12 rounded-full object-cover border-2 border-base-300"
                           />
@@ -478,7 +511,7 @@ const Sidebar = () => {
                               ? "text-base-content font-medium"
                               : "text-base-content/70"
                           }`}>
-                            {formatLastMessage(group.lastMessage, true)}
+                            {formatLastMessage(group.lastMessage, true, authUser?._id)}
                           </p>
                         ) : (
                           <p className={`text-xs ${

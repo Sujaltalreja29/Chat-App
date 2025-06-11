@@ -382,13 +382,14 @@ export const leaveGroup = async (req, res) => {
   }
 };
 
+
 export const getGroupMessages = async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { page = 1, limit = 50 } = req.query;
+    const { page = 1, limit = 50, before = null } = req.query;
     const userId = req.user._id;
 
-    // Check if user is a member of the group
+    // Check if user is a member of the group (existing code)
     const group = await Group.findById(groupId);
     if (!group) {
       return res.status(404).json({ error: "Group not found" });
@@ -402,23 +403,52 @@ export const getGroupMessages = async (req, res) => {
       return res.status(403).json({ error: "Not a member of this group" });
     }
 
-    // Get messages with pagination
-    const messages = await Message.find({
+    console.log(`📜 Getting group messages: ${groupId}, page=${page}, limit=${limit}, before=${before}`);
+
+    // Build query
+    const query = {
       groupId: groupId,
       messageType: 'group',
       deletedAt: { $exists: false }
-    })
-    .populate('senderId', 'fullName profilePic')
-    .populate('replyTo')
-    .sort({ createdAt: -1 })
-    .limit(limit * 1)
-    .skip((page - 1) * limit)
-    .lean();
+    };
+
+    if (before) {
+      query.createdAt = { $lt: new Date(before) };
+    }
+
+    // Get total count
+    const totalMessages = await Message.countDocuments({
+      groupId: groupId,
+      messageType: 'group',
+      deletedAt: { $exists: false }
+    });
+
+    // Get messages with pagination
+    const messages = await Message.find(query)
+      .populate('senderId', 'fullName profilePic')
+      .populate('replyTo')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .lean();
 
     // Reverse to get chronological order
     messages.reverse();
 
-    res.status(200).json(messages);
+    const hasMore = totalMessages > parseInt(page) * parseInt(limit);
+
+    console.log(`📜 Retrieved ${messages.length} group messages, hasMore: ${hasMore}`);
+
+    res.status(200).json({
+      messages,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalMessages / parseInt(limit)),
+        totalMessages,
+        hasMore,
+        limit: parseInt(limit)
+      }
+    });
   } catch (error) {
     console.error("Error in getGroupMessages: ", error.message);
     res.status(500).json({ error: "Internal server error" });
@@ -654,6 +684,61 @@ export const searchGroups = async (req, res) => {
     res.status(200).json(groupsWithCount);
   } catch (error) {
     console.error("Error in searchGroups: ", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getGroupMessagesBefore = async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { before, limit = 50 } = req.query;
+    const userId = req.user._id;
+
+    if (!before) {
+      return res.status(400).json({ error: "Before timestamp is required" });
+    }
+
+    // Check if user is a member of the group
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ error: "Group not found" });
+    }
+
+    const isMember = group.members.some(member => 
+      member.user.toString() === userId.toString()
+    );
+
+    if (!isMember) {
+      return res.status(403).json({ error: "Not a member of this group" });
+    }
+
+    console.log(`📜 Getting group messages before: ${before} for group: ${groupId}`);
+
+    const messages = await Message.find({
+      groupId: groupId,
+      messageType: 'group',
+      createdAt: { $lt: new Date(before) },
+      deletedAt: { $exists: false }
+    })
+    .populate('senderId', 'fullName profilePic')
+    .populate('replyTo')
+    .sort({ createdAt: -1 })
+    .limit(parseInt(limit))
+    .lean();
+
+    // Reverse to get chronological order
+    messages.reverse();
+
+    const hasMore = messages.length === parseInt(limit);
+
+    console.log(`📜 Retrieved ${messages.length} group messages before ${before}, hasMore: ${hasMore}`);
+
+    res.status(200).json({
+      messages,
+      hasMore
+    });
+  } catch (error) {
+    console.error("Error in getGroupMessagesBefore: ", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -1,70 +1,98 @@
 import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { Image, Send, X, Smile } from "lucide-react";
+import { Paperclip, Send, X, Smile } from "lucide-react";
 import toast from "react-hot-toast";
+import FileUpload from "./FileUpload";
 
 const MessageInput = () => {
   const [text, setText] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const [showFileUpload, setShowFileUpload] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
-  const { sendMessage } = useChatStore();
+  const textAreaRef = useRef(null);
+  
+  const { 
+    sendMessage, 
+    handleTyping, // 🔥 NEW
+    stopTyping   // 🔥 NEW
+  } = useChatStore();
 
-const handleImageChange = (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  if (!file.type.startsWith("image/")) {
-    toast.error("Please select an image file");
-    return;
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    toast.error("Image size should be less than 5MB");
-    return;
-  }
-
-  // Save File object → this will be sent to backend
-  setImageFile(file);
-
-  // For preview only → base64
-  const reader = new FileReader();
-  reader.onloadend = () => {
-    setImagePreview(reader.result);
+  // Handle file selection from FileUpload component
+  const handleFileSelect = (file, fileType) => {
+    setSelectedFile(file);
+    
+    if (fileType.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFilePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
+    }
+    
+    setShowFileUpload(false);
   };
-  reader.readAsDataURL(file);
-};
 
-
-  const removeImage = () => {
-  setImagePreview(null);
-  setImageFile(null); // also reset the file
-  if (fileInputRef.current) fileInputRef.current.value = "";
-};
-
-
-  const handleSendMessage = async (e) => {
-  e.preventDefault();
-  if (!text.trim() && !imagePreview) return;
-
-  try {
-    await sendMessage({
-      text: text.trim(),
-      imageFile, // send File object here
-    });
-
-    // Reset UI
-    setText("");
-    setImagePreview(null);
-    setImageFile(null);
+  // Remove selected file
+  const removeFile = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+    setShowFileUpload(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
-  } catch (error) {
-    console.error("Failed to send message:", error);
-    toast.error("Failed to send message");
-  }
-};
+  };
 
+  // 🔥 NEW: Handle text change with typing detection
+  const handleTextChange = (e) => {
+    const newText = e.target.value;
+    setText(newText);
+    
+    // Trigger typing indicator
+    if (newText.trim()) {
+      handleTyping(newText);
+    } else {
+      stopTyping();
+    }
+  };
 
+  // Send message
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!text.trim() && !selectedFile) return;
+
+    // Stop typing when sending message
+    stopTyping();
+    
+    setIsUploading(true);
+    try {
+      await sendMessage({
+        text: text.trim(),
+        file: selectedFile,
+      });
+
+      // Reset UI
+      setText("");
+      setSelectedFile(null);
+      setFilePreview(null);
+      setShowFileUpload(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      
+      // Reset textarea height
+      if (textAreaRef.current) {
+        textAreaRef.current.style.height = 'auto';
+      }
+      
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast.error("Failed to send message");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // 🔥 NEW: Handle key press with typing detection
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -72,32 +100,42 @@ const handleImageChange = (e) => {
     }
   };
 
+  // 🔥 NEW: Handle blur to stop typing
+  const handleBlur = () => {
+    stopTyping();
+  };
+
   return (
     <div className="bg-base-100 p-4">
-      {/* Image Preview */}
-      {imagePreview && (
-        <div className="mb-4 p-3 bg-base-200 rounded-lg border border-base-300">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-16 h-16 object-cover rounded-lg border border-base-300"
-              />
-              <button
-                onClick={removeImage}
-                className="absolute -top-2 -right-2 w-6 h-6 bg-error hover:bg-error-focus text-error-content rounded-full flex items-center justify-center transition-colors shadow-sm"
-                type="button"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-base-content">Image ready to send</p>
-              <p className="text-xs text-base-content/60">Click the remove button to cancel</p>
-            </div>
+      {/* File Upload Modal */}
+      {showFileUpload && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-base-content">Upload File</h3>
+            <button
+              onClick={() => setShowFileUpload(false)}
+              className="btn btn-sm btn-circle btn-ghost"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
+          <FileUpload
+            onFileSelect={handleFileSelect}
+            onRemove={removeFile}
+            selectedFile={selectedFile}
+            filePreview={filePreview}
+          />
         </div>
+      )}
+
+      {/* Selected File Preview */}
+      {selectedFile && !showFileUpload && (
+        <FileUpload
+          onFileSelect={handleFileSelect}
+          onRemove={removeFile}
+          selectedFile={selectedFile}
+          filePreview={filePreview}
+        />
       )}
 
       {/* Input Form */}
@@ -109,12 +147,15 @@ const handleImageChange = (e) => {
             
             {/* Text Input */}
             <textarea
+              ref={textAreaRef}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={handleTextChange}
               onKeyPress={handleKeyPress}
+              onBlur={handleBlur} // 🔥 NEW: Stop typing on blur
               placeholder="Type a message..."
               className="flex-1 bg-transparent border-0 outline-none resize-none px-4 py-3 text-base-content placeholder-base-content/50 max-h-32 min-h-[44px] text-sm leading-relaxed"
-              rows="1"
+                           rows="1"
+              disabled={isUploading}
               onInput={(e) => {
                 e.target.style.height = 'auto';
                 e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
@@ -124,14 +165,15 @@ const handleImageChange = (e) => {
             {/* Action Buttons Container */}
             <div className="flex items-center gap-1 pr-2 pb-2">
               
-                            {/* Attachment Button */}
+              {/* File Attachment Button */}
               <button
                 type="button"
                 className="btn btn-ghost btn-sm btn-circle"
-                onClick={() => fileInputRef.current?.click()}
-                title="Attach image"
+                onClick={() => setShowFileUpload(!showFileUpload)}
+                title="Attach file"
+                disabled={isUploading}
               >
-                <Image className="w-5 h-5" />
+                <Paperclip className="w-5 h-5" />
               </button>
 
               {/* Emoji Button */}
@@ -139,41 +181,41 @@ const handleImageChange = (e) => {
                 type="button"
                 className="btn btn-ghost btn-sm btn-circle"
                 title="Add emoji"
+                disabled={isUploading}
               >
                 <Smile className="w-5 h-5" />
               </button>
             </div>
           </div>
-
-          {/* Hidden File Input */}
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-          />
         </div>
 
         {/* Send Button */}
         <button
           type="submit"
-          disabled={!text.trim() && !imagePreview}
+          disabled={(!text.trim() && !selectedFile) || isUploading}
           className={`btn btn-circle ${
-            text.trim() || imagePreview
+            text.trim() || selectedFile
               ? 'btn-primary shadow-lg hover:shadow-xl transform hover:scale-105'
               : 'btn-disabled'
           }`}
         >
-          <Send className={`w-5 h-5 ${text.trim() || imagePreview ? 'translate-x-0.5' : ''}`} />
+          {isUploading ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+          ) : (
+            <Send className={`w-5 h-5 ${text.trim() || selectedFile ? 'translate-x-0.5' : ''}`} />
+          )}
         </button>
       </form>
 
-      {/* Quick Tip */}
+      {/* Status/Tips */}
       <div className="mt-2 text-center">
-        <p className="text-xs text-base-content/50">
-          Press Enter to send • Shift + Enter for new line
-        </p>
+        {isUploading ? (
+          <p className="text-xs text-primary">Uploading...</p>
+        ) : (
+          <p className="text-xs text-base-content/50">
+            Press Enter to send • Shift + Enter for new line • Support: Images, Documents, Videos, Audio
+          </p>
+        )}
       </div>
     </div>
   );

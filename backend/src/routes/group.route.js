@@ -1,4 +1,3 @@
-// routes/group.routes.js
 import express from "express";
 import multer from "multer";
 import { protectRoute } from "../middleware/auth.middleware.js";
@@ -13,6 +12,7 @@ import {
   leaveGroup,
   updateMemberRole,
   getGroupMessages,
+  getGroupMessagesBefore, // 🔥 NEW
   searchGroups
 } from "../controllers/group.controller.js";
 
@@ -34,6 +34,7 @@ router.put("/:groupId/members/:userId/role", protectRoute, updateMemberRole);
 
 // Group Messages
 router.get("/:groupId/messages", protectRoute, getGroupMessages);
+router.get("/:groupId/messages/before", protectRoute, getGroupMessagesBefore); // 🔥 NEW
 
 // Search
 router.get("/search", protectRoute, searchGroups);

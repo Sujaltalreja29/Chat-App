@@ -65,7 +65,32 @@ const messageSchema = new mongoose.Schema(
     },
     deletedAt: {
       type: Date
+    },
+      file: {
+    originalName: String,
+    fileName: String,
+    fileSize: Number,
+    mimeType: String,
+    url: String,
+    thumbnail: String, // For images/videos
+    fileType: {
+      type: String,
+      enum: ['image', 'document', 'video', 'audio', 'other']
+    },
+    isCompressed: Boolean,
+    compressionRatio: Number,
+    dimensions: {
+      width: Number,
+      height: Number
     }
+  },
+  
+  // 🔥 NEW: Message content type
+  messageSubType: {
+    type: String,
+    enum: ['text', 'image', 'document', 'file', 'audio', 'video'],
+    default: 'text'
+  },
   },
   { timestamps: true }
 );
@@ -76,6 +101,7 @@ messageSchema.index({ groupId: 1, createdAt: -1 });
 messageSchema.index({ messageType: 1 });
 messageSchema.index({ receiverId: 1, isRead: 1 }); // For unread direct messages
 messageSchema.index({ groupId: 1, 'readBy.user': 1 }); // For unread group messages
+messageSchema.index({ 'file.fileType': 1 });
 
 const Message = mongoose.model("Message", messageSchema);
 

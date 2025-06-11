@@ -3,6 +3,8 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
+import usePagination from '../hooks/usePagination';
+import useTyping from '../hooks/useTyping';
 
 export const useChatStore = create((set, get) => ({
   messages: [],
@@ -14,7 +16,16 @@ export const useChatStore = create((set, get) => ({
   isGroupsLoading: false,
   isMessagesLoading: false,
   chatType: 'direct',
+    typingUsers: [],
+  isUserTyping: false,
   
+    messagesPage: 1,
+  hasMoreMessages: true,
+  isLoadingMessages: false,
+  isLoadingMoreMessages: false,
+
+  messageCache: new Map(),
+
   // 🔥 NEW: Notification related state
   totalUnreadCount: 0,
   unreadCounts: { direct: [], group: [] },
@@ -101,24 +112,181 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
-  getMessages: async (userId, type = 'direct') => {
-    set({ isMessagesLoading: true });
+  getMessages: async (userId, type = 'direct', page = 1, useCache = true) => {
+    const chatId = type === 'group' ? userId : 
+      [get().selectedUser?._id, useAuthStore.getState().authUser?._id].sort().join('-');
+    
+    // Check cache first
+    if (useCache && page === 1) {
+      const cached = get().messageCache.get(`${chatId}-${type}`);
+      if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+        set({ 
+          messages: cached.messages,
+          hasMoreMessages: cached.hasMore 
+        });
+                await get().markMessagesAsRead(userId, type);
+        return;
+      }
+    }
+
+    set({ isLoadingMessages: true });
     try {
       let res;
       if (type === 'group') {
-        res = await axiosInstance.get(`/groups/${userId}/messages`);
+        res = await axiosInstance.get(`/groups/${userId}/messages`, {
+          params: { page, limit: 50 }
+        });
       } else {
-        res = await axiosInstance.get(`/messages/${userId}`);
+        res = await axiosInstance.get(`/messages/${userId}`, {
+          params: { page, limit: 50 }
+        });
       }
-      set({ messages: res.data });
+
+      const { messages, pagination } = res.data;
       
-      // 🔥 NEW: Mark messages as read when opening chat
+      set({ 
+        messages,
+        hasMoreMessages: pagination?.hasMore || false,
+        messagesPage: page
+      });
+      
+      // Cache messages
+      get().messageCache.set(`${chatId}-${type}`, {
+        messages,
+        hasMore: pagination?.hasMore || false,
+        timestamp: Date.now()
+      });
+      
+      // Mark messages as read when opening chat
       await get().markMessagesAsRead(userId, type);
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to fetch messages");
     } finally {
-      set({ isMessagesLoading: false });
+      set({ isLoadingMessages: false });
     }
+  },
+
+    // 🔥 NEW: Load more messages for infinite scroll
+  loadMoreMessages: async (userId, type = 'direct') => {
+    const { hasMoreMessages, isLoadingMoreMessages, messages } = get();
+    
+    if (!hasMoreMessages || isLoadingMoreMessages || messages.length === 0) return;
+
+    set({ isLoadingMoreMessages: true });
+    try {
+      const oldestMessage = messages[0];
+      const beforeTimestamp = oldestMessage.createdAt;
+
+      let res;
+      if (type === 'group') {
+        res = await axiosInstance.get(`/groups/${userId}/messages/before`, {
+          params: { before: beforeTimestamp, limit: 50 }
+        });
+      } else {
+        res = await axiosInstance.get(`/messages/${userId}/before`, {
+          params: { before: beforeTimestamp, limit: 50 }
+        });
+      }
+
+      const { messages: olderMessages, hasMore } = res.data;
+      
+      if (olderMessages.length > 0) {
+        set({ 
+          messages: [...olderMessages, ...messages],
+          hasMoreMessages: hasMore
+        });
+      } else {
+        set({ hasMoreMessages: false });
+      }
+    } catch (error) {
+      console.error('Failed to load more messages:', error);
+      toast.error('Failed to load more messages');
+    } finally {
+      set({ isLoadingMoreMessages: false });
+    }
+  },
+
+    handleTyping: (inputValue) => {
+    const { selectedUser, selectedGroup, chatType } = get();
+    const { socket, authUser } = useAuthStore.getState();
+    
+    if (!socket || !authUser) return;
+
+    let chatId;
+    if (chatType === 'group' && selectedGroup) {
+      chatId = `group:${selectedGroup._id}`;
+    } else if (chatType === 'direct' && selectedUser) {
+      chatId = `direct:${[selectedUser._id, authUser._id].sort().join('-')}`;
+    } else {
+      return;
+    }
+
+    // Debounced typing logic
+    clearTimeout(get().typingTimeout);
+    
+    if (!get().isUserTyping) {
+      set({ isUserTyping: true });
+      
+      socket.emit('typing', {
+        chatId,
+        chatType,
+        isTyping: true,
+        userInfo: {
+          userId: authUser._id,
+          fullName: authUser.fullName,
+          profilePic: authUser.profilePic
+        }
+      });
+    }
+
+    // Set timeout to stop typing
+    const timeout = setTimeout(() => {
+      set({ isUserTyping: false });
+      
+      socket.emit('typing', {
+        chatId,
+        chatType,
+        isTyping: false,
+        userInfo: {
+          userId: authUser._id,
+          fullName: authUser.fullName,
+          profilePic: authUser.profilePic
+        }
+      });
+    }, 2000);
+
+    set({ typingTimeout: timeout });
+  },
+
+  // 🔥 NEW: Stop typing
+  stopTyping: () => {
+    const { selectedUser, selectedGroup, chatType, isUserTyping } = get();
+    const { socket, authUser } = useAuthStore.getState();
+    
+    if (!socket || !authUser || !isUserTyping) return;
+
+    let chatId;
+    if (chatType === 'group' && selectedGroup) {
+      chatId = `group:${selectedGroup._id}`;
+    } else if (chatType === 'direct' && selectedUser) {
+      chatId = `direct:${[selectedUser._id, authUser._id].sort().join('-')}`;
+    } else {
+      return;
+    }
+
+    set({ isUserTyping: false });
+    clearTimeout(get().typingTimeout);
+    
+    socket.emit('typing', {
+      chatId,
+      chatType,
+      isTyping: false,
+      userInfo: {
+        userId: authUser._id,
+        fullName: authUser.fullName,
+        profilePic: authUser.profilePic
+      }
+    });
   },
 
 sendMessage: async (messageData) => {
@@ -127,10 +295,18 @@ sendMessage: async (messageData) => {
   
   try {
     const formData = new FormData();
-    formData.append("text", messageData.text);
+    // Add text if provided
+    if (messageData.text) {
+      formData.append("text", messageData.text);
+    }
 
-    if (messageData.imageFile) {
-      formData.append("image", messageData.imageFile);
+    // 🔥 ENHANCED: Handle any file type
+    if (messageData.file) {
+      formData.append("file", messageData.file); // Changed from "image" to "file"
+    }
+    // Legacy support for imageFile
+    else if (messageData.imageFile) {
+      formData.append("file", messageData.imageFile);
     }
 
     let res;
@@ -194,13 +370,7 @@ sendMessage: async (messageData) => {
 
 subscribeToMessages: () => {
   const socket = useAuthStore.getState().socket;
-  const { authUser } = useAuthStore.getState();
-  
-  console.log("🔥 DEBUG: Subscribing to messages");
-  console.log("🔥 DEBUG: Socket exists:", !!socket);
-  console.log("🔥 DEBUG: Socket connected:", socket?.connected);
-  console.log("🔥 DEBUG: Auth user:", authUser?._id);
-  
+  const { authUser } = useAuthStore.getState();   
   if (!socket) {
     console.log("❌ No socket available");
     return;
@@ -213,59 +383,56 @@ subscribeToMessages: () => {
     // Remove existing listeners to avoid duplicates
     socket.off("newMessage");
     socket.off("newGroupMessage");
+    socket.off("typingUpdate");
     
     // Handle new direct messages
-    socket.on("newMessage", (newMessage) => {
-      console.log("📨 DEBUG: Received newMessage event:", newMessage);
-      console.log("📨 DEBUG: Sender ID:", newMessage.senderId);
-      console.log("📨 DEBUG: Current user ID:", authUser._id);
-      
-      const { selectedUser, chatType } = get();
-      console.log("📨 DEBUG: Selected user:", selectedUser?._id);
-      console.log("📨 DEBUG: Chat type:", chatType);
-      
-      // Check if this message is from the currently selected user
-      const isFromSelectedUser = selectedUser && (
-        newMessage.senderId === selectedUser._id || 
-        newMessage.senderId._id === selectedUser._id
-      );
-      
-      const isCurrentChatDirect = chatType === 'direct';
-      
-      console.log("📨 DEBUG: Is from selected user:", isFromSelectedUser);
-      console.log("📨 DEBUG: Is direct chat:", isCurrentChatDirect);
-      
-      if (isCurrentChatDirect && isFromSelectedUser) {
-        console.log("📨 DEBUG: Adding to current chat messages");
-        set({ messages: [...get().messages, newMessage] });
-        get().markMessagesAsRead(selectedUser._id, 'direct');
-      } else {
-        console.log("📨 DEBUG: Adding to notifications");
-        get().handleNewMessageNotification(newMessage, 'direct');
-      }
-    });
+      socket.on("newMessage", (newMessage) => {
+        const { selectedUser, chatType } = get();
+        const isFromSelectedUser = selectedUser && (
+          newMessage.senderId === selectedUser._id || 
+          newMessage.senderId._id === selectedUser._id
+        );
+        
+        if (chatType === 'direct' && isFromSelectedUser) {
+          set({ messages: [...get().messages, newMessage] });
+          get().markMessagesAsRead(selectedUser._id, 'direct');
+        } else {
+          get().handleNewMessageNotification(newMessage, 'direct');
+        }
+      });
 
     // Handle new group messages  
-    socket.on("newGroupMessage", (newMessage) => {
-      console.log("📨 DEBUG: Received newGroupMessage event:", newMessage);
-      
-      const { selectedGroup, chatType } = get();
-      
-      const isFromSelectedGroup = selectedGroup && newMessage.groupId === selectedGroup._id;
-      const isCurrentChatGroup = chatType === 'group';
-      
-      console.log("📨 DEBUG: Is from selected group:", isFromSelectedGroup);
-      console.log("📨 DEBUG: Is group chat:", isCurrentChatGroup);
-      
-      if (isCurrentChatGroup && isFromSelectedGroup) {
-        console.log("📨 DEBUG: Adding to current group chat messages");
-        set({ messages: [...get().messages, newMessage] });
-        get().markMessagesAsRead(selectedGroup._id, 'group');
-      } else {
-        console.log("📨 DEBUG: Adding to group notifications");
-        get().handleNewMessageNotification(newMessage, 'group');
-      }
-    });
+      socket.on("newGroupMessage", (newMessage) => {
+        const { selectedGroup, chatType } = get();
+        const isFromSelectedGroup = selectedGroup && newMessage.groupId === selectedGroup._id;
+        
+        if (chatType === 'group' && isFromSelectedGroup) {
+          set({ messages: [...get().messages, newMessage] });
+          get().markMessagesAsRead(selectedGroup._id, 'group');
+        } else {
+          get().handleNewMessageNotification(newMessage, 'group');
+        }
+      });
+
+            socket.on("typingUpdate", (data) => {
+        const { selectedUser, selectedGroup, chatType } = get();
+        let currentChatId;
+        
+        if (chatType === 'group' && selectedGroup) {
+          currentChatId = `group:${selectedGroup._id}`;
+        } else if (chatType === 'direct' && selectedUser) {
+          currentChatId = `direct:${[selectedUser._id, authUser._id].sort().join('-')}`;
+        }
+        
+        if (data.chatId === currentChatId) {
+          // Filter out current user from typing users
+          const otherTypingUsers = data.typingUsers.filter(
+            user => user.userId !== authUser._id
+          );
+          set({ typingUsers: otherTypingUsers });
+        }
+      });
+
 
     // Other socket events...
     socket.on("addedToGroup", (data) => {
@@ -547,11 +714,16 @@ unsubscribeFromMessages: () => {
   },
 
   clearChat: () => {
+    get().stopTyping();
     set({ 
       selectedUser: null, 
       selectedGroup: null, 
       messages: [],
-      chatType: 'direct'
+      chatType: 'direct',
+      typingUsers: [],
+      isUserTyping: false,
+      hasMoreMessages: true,
+      messagesPage: 1
     });
   },
 }));
