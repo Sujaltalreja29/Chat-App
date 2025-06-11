@@ -183,9 +183,13 @@ export const useFriendStore = create((set, get) => ({
   },
 
   // Unsubscribe from friend request notifications
-  unsubscribeFromFriendRequests: () => {
-    const socket = useAuthStore.getState().socket;
-    socket.off("friendRequestReceived");
-    socket.off("friendRequestAccepted");
-  },
+unsubscribeFromFriendRequests: () => {
+  const socket = useAuthStore.getState().socket;
+
+  if (!socket || typeof socket.off !== "function") return;
+
+  socket.off("friendRequestReceived");
+  socket.off("friendRequestAccepted");
+},
+
 }));
