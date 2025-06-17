@@ -1,5 +1,7 @@
+// src/components/InfiniteScrollMessages.jsx
 import { useEffect, useRef, useCallback } from 'react';
 import { useIntersection } from '../hooks/useIntersection';
+import { useResponsive } from '../hooks/useResponsive';
 
 const InfiniteScrollMessages = ({ 
   children, 
@@ -13,11 +15,13 @@ const InfiniteScrollMessages = ({
   const bottomRef = useRef(null);
   const lastScrollHeight = useRef(0);
   const isAtBottom = useRef(true);
+  
+  const { isMobile } = useResponsive();
 
   // Intersection observer for top of messages (load more trigger)
   const [topInView] = useIntersection(topRef, {
     threshold: 0.1,
-    rootMargin: '100px'
+    rootMargin: isMobile ? '50px' : '100px' // Smaller margin on mobile
   });
 
   // Handle loading more messages when scrolled to top
@@ -48,7 +52,7 @@ const InfiniteScrollMessages = ({
     }
   }, [isLoadingMore]);
 
-  // Auto-scroll to bottom for new messages (only if user is near bottom)
+  // Auto-scroll to bottom for new messages
   const scrollToBottom = useCallback((smooth = true) => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({
@@ -58,16 +62,16 @@ const InfiniteScrollMessages = ({
     }
   }, []);
 
-  // Track if user is at bottom
+  // Track if user is at bottom (more sensitive on mobile)
   const handleScroll = useCallback(() => {
     if (scrollRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-      const threshold = 100; // pixels from bottom
+      const threshold = isMobile ? 50 : 100; // Smaller threshold on mobile
       isAtBottom.current = scrollHeight - scrollTop - clientHeight < threshold;
     }
-  }, []);
+  }, [isMobile]);
 
-  // Scroll to bottom when new messages arrive (only if user was at bottom)
+  // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (isAtBottom.current) {
       scrollToBottom();
@@ -77,17 +81,23 @@ const InfiniteScrollMessages = ({
   return (
     <div 
       ref={scrollRef}
-      className={`flex-1 overflow-y-auto px-4 py-4 ${className}`}
+      className={`flex-1 overflow-y-auto scroll-smooth-mobile ${
+        isMobile ? 'px-3 py-3' : 'px-4 py-4'
+      } ${className}`}
       onScroll={handleScroll}
     >
       {/* Load more trigger */}
       {hasMore && (
         <div ref={topRef} className="h-1 -mt-1">
           {isLoadingMore && (
-            <div className="flex justify-center py-4">
-              <div className="flex items-center gap-2 text-sm text-base-content/60">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                Loading more messages...
+            <div className={`flex justify-center ${isMobile ? 'py-2' : 'py-4'}`}>
+              <div className="flex items-center gap-2 text-base-content/60">
+                <div className={`animate-spin rounded-full border-b-2 border-primary ${
+                  isMobile ? 'h-3 w-3' : 'h-4 w-4'
+                }`}></div>
+                <span className={isMobile ? 'text-xs' : 'text-sm'}>
+                  Loading more messages...
+                </span>
               </div>
             </div>
           )}
@@ -95,7 +105,7 @@ const InfiniteScrollMessages = ({
       )}
 
       {/* Messages */}
-      <div className="space-y-4">
+      <div className={isMobile ? 'space-y-3' : 'space-y-4'}>
         {children}
       </div>
 

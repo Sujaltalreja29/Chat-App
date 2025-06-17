@@ -1,32 +1,37 @@
+// src/components/ChatContainer.jsx
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef } from "react";
+import { useResponsive } from "../hooks/useResponsive";
+import { useVirtualKeyboard } from "../hooks/useKeyboard";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
-import TypingIndicator from "./TypingIndicator"; // 🔥 NEW
-import InfiniteScrollMessages from "./InfiniteScrollMessages"; // 🔥 NEW
+import TypingIndicator from "./TypingIndicator";
+import InfiniteScrollMessages from "./InfiniteScrollMessages";
 import FileMessage from "./FileMessage";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
 import { CheckCheck, MessageSquare, Hash } from "lucide-react";
 
-const ChatContainer = () => {
+const ChatContainer = ({ onBackClick, isMobile = false }) => {
   const {
     messages,
     getMessages,
-    loadMoreMessages, // 🔥 NEW
+    loadMoreMessages,
     isMessagesLoading,
-    isLoadingMoreMessages, // 🔥 NEW
-    hasMoreMessages, // 🔥 NEW
+    isLoadingMoreMessages,
+    hasMoreMessages,
     selectedUser,
     selectedGroup,
     subscribeToMessages,
     unsubscribeFromMessages,
     chatType,
-    typingUsers // 🔥 NEW
+    typingUsers
   } = useChatStore();
   
   const { authUser } = useAuthStore();
+  const { showMobileLayout, isSmallMobile } = useResponsive();
+  const { isKeyboardOpen, keyboardHeight } = useVirtualKeyboard();
   const messageEndRef = useRef(null);
 
   useEffect(() => {
@@ -40,7 +45,6 @@ const ChatContainer = () => {
     return () => unsubscribeFromMessages();
   }, [selectedUser, selectedGroup, chatType]);
 
-  // 🔥 NEW: Handle loading more messages
   const handleLoadMore = () => {
     if (chatType === 'direct' && selectedUser) {
       loadMoreMessages(selectedUser._id, 'direct');
@@ -49,14 +53,13 @@ const ChatContainer = () => {
     }
   };
 
-  // Auto-scroll to bottom for new messages (only when user sends or is at bottom)
+  // Auto-scroll to bottom for new messages
   useEffect(() => {
     if (messageEndRef.current && messages?.length > 0) {
       const lastMessage = messages[messages.length - 1];
       const isOwnMessage = lastMessage.senderId._id === authUser._id;
       
       if (isOwnMessage) {
-        // Always scroll for own messages
         messageEndRef.current.scrollIntoView({ behavior: "smooth" });
       }
     }
@@ -64,8 +67,10 @@ const ChatContainer = () => {
 
   if (isMessagesLoading) {
     return (
-      <div className="flex-1 flex flex-col h-full bg-base-100">
-        <ChatHeader />
+      <div className={`flex-1 flex flex-col h-full bg-base-100 ${
+        showMobileLayout ? 'h-screen-safe' : ''
+      }`}>
+        {!showMobileLayout && <ChatHeader />}
         <div className="flex-1 overflow-hidden">
           <MessageSkeleton />
         </div>
@@ -75,25 +80,48 @@ const ChatContainer = () => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-base-100">
-      {/* Fixed Header */}
-      <ChatHeader />
+    <div 
+      className={`flex-1 flex flex-col bg-base-100 ${
+        showMobileLayout 
+          ? `h-full ${isKeyboardOpen ? 'pb-safe-bottom' : ''}` 
+          : 'h-full'
+      }`}
+      style={{
+        height: showMobileLayout && isKeyboardOpen 
+          ? `calc(100vh - ${keyboardHeight}px)` 
+          : undefined
+      }}
+    >
+      {/* Fixed Header - Hide on mobile (handled by MobileChatHeader) */}
+      {!showMobileLayout && <ChatHeader />}
 
-      {/* Messages Container with Infinite Scroll */}
+      {/* Messages Container */}
       {messages?.length === 0 ? (
         /* Empty State */
-        <div className="flex-1 flex flex-col items-center justify-center text-center bg-base-200 px-4">
-          <div className="w-16 h-16 bg-base-300 rounded-full flex items-center justify-center mb-4">
+        <div className={`flex-1 flex flex-col items-center justify-center text-center bg-base-200 ${
+          showMobileLayout ? 'px-4' : 'px-4'
+        }`}>
+          <div className={`bg-base-300 rounded-full flex items-center justify-center mb-4 ${
+            showMobileLayout ? 'w-12 h-12' : 'w-16 h-16'
+          }`}>
             {chatType === 'group' ? (
-              <Hash className="w-8 h-8 text-base-content/50" />
+              <Hash className={`text-base-content/50 ${
+                showMobileLayout ? 'w-6 h-6' : 'w-8 h-8'
+              }`} />
             ) : (
-              <MessageSquare className="w-8 h-8 text-base-content/50" />
+              <MessageSquare className={`text-base-content/50 ${
+                showMobileLayout ? 'w-6 h-6' : 'w-8 h-8'
+              }`} />
             )}
           </div>
-          <h3 className="text-lg font-semibold text-base-content mb-2">
+          <h3 className={`font-semibold text-base-content mb-2 ${
+            showMobileLayout ? 'text-base' : 'text-lg'
+          }`}>
             No messages yet
           </h3>
-          <p className="text-base-content/70 max-w-sm">
+          <p className={`text-base-content/70 max-w-sm ${
+            showMobileLayout ? 'text-sm' : 'text-base'
+          }`}>
             {chatType === 'group' && selectedGroup ? (
               <>Start the conversation in <span className="font-medium text-base-content">{selectedGroup.name}</span></>
             ) : selectedUser ? (
@@ -104,7 +132,7 @@ const ChatContainer = () => {
           </p>
         </div>
       ) : (
-        /* 🔥 NEW: Messages with Infinite Scroll */
+        /* Messages with Infinite Scroll */
         <InfiniteScrollMessages
           hasMore={hasMoreMessages}
           isLoadingMore={isLoadingMoreMessages}
@@ -119,7 +147,9 @@ const ChatContainer = () => {
             return (
               <div
                 key={message._id}
-                className={`flex gap-3 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${
+                  showMobileLayout ? 'gap-2' : 'gap-3'
+                } ${isOwn ? 'justify-end' : 'justify-start'}`}
               >
                 {/* Avatar - Left side for others */}
                 {!isOwn && (
@@ -128,21 +158,29 @@ const ChatContainer = () => {
                       <img
                         src={message.senderId.profilePic || "/avatar.png"}
                         alt={message.senderId.fullName}
-                        className="w-8 h-8 rounded-full object-cover border-2 border-base-100 shadow-sm"
+                        className={`rounded-full object-cover border-2 border-base-100 shadow-sm ${
+                          showMobileLayout ? 'w-6 h-6' : 'w-8 h-8'
+                        }`}
                       />
                     ) : (
-                      <div className="w-8 h-8"></div>
+                      <div className={showMobileLayout ? 'w-6 h-6' : 'w-8 h-8'}></div>
                     )}
                   </div>
                 )}
 
                 {/* Message Content */}
-                <div className={`flex flex-col max-w-[75%] sm:max-w-[60%] ${isOwn ? 'items-end' : 'items-start'}`}>
+                <div className={`flex flex-col ${
+                  showMobileLayout 
+                    ? 'max-w-[85%]' 
+                    : 'max-w-[75%] sm:max-w-[60%]'
+                } ${isOwn ? 'items-end' : 'items-start'}`}>
                   
                   {/* Sender Name for Groups */}
                   {showSenderName && (
-                    <div className="mb-1 ml-2">
-                      <span className="text-xs font-semibold text-base-content/80">
+                    <div className={`mb-1 ${showMobileLayout ? 'ml-1' : 'ml-2'}`}>
+                      <span className={`font-semibold text-base-content/80 ${
+                        showMobileLayout ? 'text-xs' : 'text-xs'
+                      }`}>
                         {message.senderId.fullName}
                       </span>
                     </div>
@@ -150,7 +188,9 @@ const ChatContainer = () => {
 
                   {/* Message Bubble */}
                   <div
-                    className={`relative px-4 py-3 rounded-2xl shadow-sm ${
+                    className={`relative rounded-2xl shadow-sm ${
+                      showMobileLayout ? 'px-3 py-2' : 'px-4 py-3'
+                    } ${
                       isOwn
                         ? 'bg-primary text-primary-content rounded-br-md'
                         : 'bg-base-100 text-base-content border border-base-300 rounded-bl-md'
@@ -159,17 +199,23 @@ const ChatContainer = () => {
                     {/* File Message Support */}
                     {message.file && (
                       <div className={message.text ? "mb-3" : ""}>
-                        <FileMessage file={message.file} isOwn={isOwn} />
+                        <FileMessage 
+                          file={message.file} 
+                          isOwn={isOwn} 
+                          isMobile={showMobileLayout}
+                        />
                       </div>
                     )}
 
-                    {/* Legacy Image Message - ONLY show if no file field */}
+                    {/* Legacy Image Message */}
                     {message.image && !message.file && (
                       <div className={message.text ? "mb-3" : ""}>
                         <img
                           src={message.image}
                           alt="Shared image"
-                          className="max-w-[250px] w-full rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          className={`w-full rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity ${
+                            showMobileLayout ? 'max-w-[200px]' : 'max-w-[250px]'
+                          }`}
                           onClick={() => window.open(message.image, '_blank')}
                         />
                       </div>
@@ -177,7 +223,9 @@ const ChatContainer = () => {
 
                     {/* Text Message */}
                     {message.text && (
-                      <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                      <p className={`leading-relaxed break-words whitespace-pre-wrap ${
+                        showMobileLayout ? 'text-sm' : 'text-sm'
+                      }`}>
                         {message.text}
                       </p>
                     )}
@@ -185,11 +233,13 @@ const ChatContainer = () => {
                     {/* Message Time - Inside bubble for own messages */}
                     {isOwn && (
                       <div className="flex items-center justify-end gap-1 mt-1">
-                        <time className="text-xs text-primary-content/70">
+                        <time className={`text-primary-content/70 ${
+                          showMobileLayout ? 'text-xs' : 'text-xs'
+                        }`}>
                           {formatMessageTime(message.createdAt)}
                         </time>
                         <div className="text-primary-content/70">
-                          <CheckCheck className="w-3 h-3" />
+                          <CheckCheck className={showMobileLayout ? 'w-3 h-3' : 'w-3 h-3'} />
                         </div>
                       </div>
                     )}
@@ -197,8 +247,10 @@ const ChatContainer = () => {
 
                   {/* Message Time - Outside bubble for received messages */}
                   {!isOwn && (
-                    <div className="mt-1 ml-2">
-                      <time className="text-xs text-base-content/60">
+                    <div className={`mt-1 ${showMobileLayout ? 'ml-1' : 'ml-2'}`}>
+                      <time className={`text-base-content/60 ${
+                        showMobileLayout ? 'text-xs' : 'text-xs'
+                      }`}>
                         {formatMessageTime(message.createdAt)}
                       </time>
                     </div>
@@ -212,10 +264,14 @@ const ChatContainer = () => {
                       <img
                         src={authUser.profilePic || "/avatar.png"}
                         alt={authUser.fullName}
-                        className="w-8 h-8 rounded-full object-cover border-2 border-base-100 shadow-sm"
+                        className={`rounded-full object-cover border-2 border-base-100 shadow-sm ${
+                          showMobileLayout ? 'w-6 h-6' : 'w-8 h-8'
+                        }`}
                       />
                     ) : (
-                      <div className="w-8 h-8"></div>
+                      <div className={// src/components/ChatContainer.jsx (continued)
+                        showMobileLayout ? 'w-6 h-6' : 'w-8 h-8'
+                      }></div>
                     )}
                   </div>
                 )}
@@ -226,12 +282,18 @@ const ChatContainer = () => {
         </InfiniteScrollMessages>
       )}
 
-      {/* 🔥 NEW: Typing Indicator */}
-      <TypingIndicator typingUsers={typingUsers} chatType={chatType} />
+      {/* Typing Indicator */}
+      <TypingIndicator 
+        typingUsers={typingUsers} 
+        chatType={chatType} 
+        isMobile={showMobileLayout}
+      />
 
       {/* Fixed Input at Bottom */}
-      <div className="border-t border-base-300 bg-base-100">
-        <MessageInput />
+      <div className={`border-t border-base-300 bg-base-100 ${
+        showMobileLayout ? 'pb-safe-bottom' : ''
+      }`}>
+        <MessageInput isMobile={showMobileLayout} />
       </div>
     </div>
   );
