@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useGroupStore } from "../store/useGroupStore";
+import { useSearchStore } from "../store/useSearchStore"; // ADD THIS
 import { 
   X, Phone, Video, MoreVertical, ArrowLeft, 
   Users, Crown, Settings, UserMinus, LogOut,
@@ -14,6 +15,7 @@ import FriendProfile from "./FriendProfile"; // ADD THIS IMPORT
 const ChatHeader = () => {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showFriendProfile, setShowFriendProfile] = useState(false); // ADD THIS STATE
+  const { setSearchMode, showSearch } = useSearchStore();
   
   const { 
     selectedUser, selectedGroup, setSelectedUser, 
@@ -22,6 +24,8 @@ const ChatHeader = () => {
   
   const { onlineUsers, authUser } = useAuthStore();
   const { leaveGroup, deleteGroup } = useGroupStore();
+
+  const { toggleConversationSearch } = useSearchStore();
 
   const handleBack = () => {
     clearChat();
@@ -39,6 +43,11 @@ const ChatHeader = () => {
       await deleteGroup(selectedGroup._id);
       clearChat();
     }
+  };
+
+  const handleConversationSearch = () => {
+    const chatId = chatType === 'group' ? selectedGroup?._id : selectedUser?._id;
+    toggleConversationSearch(chatId, chatType);
   };
 
   // Get current user's role in group
@@ -150,12 +159,15 @@ const ChatHeader = () => {
                       </button>
                     </li>
                   )}
-                  <li>
-                    <button className="flex items-center gap-2">
-                      <Search className="w-4 h-4" />
-                      Search Messages
-                    </button>
-                  </li>
+  <li>
+    <button 
+      onClick={handleConversationSearch}  // CHANGE THIS LINE
+      className="flex items-center gap-2"
+    >
+      <Search className="w-4 h-4" />
+      Search Messages
+    </button>
+  </li>
                   <div className="divider my-1"></div>
                   <li>
                     <button 
@@ -281,12 +293,17 @@ const ChatHeader = () => {
                       Friend Profile
                     </button>
                   </li>
-                  <li>
-                    <button className="flex items-center gap-2">
-                      <Search className="w-4 h-4" />
-                      Search Messages
-                    </button>
-                  </li>
+                  {/* REPLACE THIS EXISTING SEARCH BUTTON */}
+  <li>
+    <button 
+      onClick={handleConversationSearch}  // CHANGE THIS LINE
+      className="flex items-center gap-2"
+    >
+      <Search className="w-4 h-4" />
+      Search Messages
+    </button>
+  </li>
+
                   <li>
                     <button className="flex items-center gap-2">
                       <Info className="w-4 h-4" />

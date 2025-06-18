@@ -3,15 +3,18 @@ import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useResponsive } from "../hooks/useResponsive";
 import { useVirtualKeyboard } from "../hooks/useKeyboard";
-import { Paperclip, Send, X, Smile } from "lucide-react";
+import { Paperclip, Send, X, Smile, Mic } from "lucide-react";
 import toast from "react-hot-toast";
 import FileUpload from "./FileUpload";
+import VoiceRecorder from "./VoiceRecorder"; // 🆕 Import VoiceRecorder
+import { isAudioRecordingSupported } from "../utils/audioUtils"; // 🆕 Import audio utils
 
 const MessageInput = ({ isMobile = false }) => {
   const [text, setText] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false); // 🆕 Voice recorder state
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   const textAreaRef = useRef(null);
@@ -20,10 +23,52 @@ const MessageInput = ({ isMobile = false }) => {
   const { isKeyboardOpen } = useVirtualKeyboard();
   
   const { 
-    sendMessage, 
+    sendMessage,
+    sendVoiceNote, // 🆕 Voice note function from store
     handleTyping,
-    stopTyping
+    stopTyping,
+    selectedUser,
+    selectedGroup,
+    chatType
   } = useChatStore();
+
+  // 🆕 Check if audio recording is supported
+  const audioSupported = isAudioRecordingSupported();
+
+  // 🆕 Handle voice note sending
+  const handleSendVoiceNote = async ({ audioBlob, duration, waveform }) => {
+    if (!selectedUser && !selectedGroup) {
+      toast.error("Please select a chat first");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      
+      await sendVoiceNote({
+        audioBlob,
+        duration,
+        waveform,
+        receiverId: selectedUser?._id,
+        groupId: selectedGroup?._id,
+        chatType
+      });
+      
+      setShowVoiceRecorder(false);
+      toast.success('Voice note sent!');
+      
+    } catch (error) {
+      console.error("Error sending voice note:", error);
+      toast.error("Failed to send voice note");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // 🆕 Handle voice recorder cancel
+  const handleVoiceRecorderCancel = () => {
+    setShowVoiceRecorder(false);
+  };
 
   const handleFileSelect = (file, fileType) => {
     setSelectedFile(file);
@@ -100,6 +145,21 @@ const MessageInput = ({ isMobile = false }) => {
   const handleBlur = () => {
     stopTyping();
   };
+
+  // 🆕 Show voice recorder instead of input when recording
+  if (showVoiceRecorder) {
+    return (
+      <div className={`bg-base-100 ${
+        isMobile ? 'p-3' : 'p-4'
+      } ${isKeyboardOpen ? 'pb-safe-bottom' : ''}`}>
+        <VoiceRecorder
+          onSendVoiceNote={handleSendVoiceNote}
+          onCancel={handleVoiceRecorderCancel}
+          className="w-full"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-base-100 ${
@@ -197,8 +257,25 @@ const MessageInput = ({ isMobile = false }) => {
                 <Paperclip className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
               </button>
 
-              {/* Emoji Button - Hide on very small screens */}
-              {!isSmallMobile && (
+              {/* 🆕 Voice Note Button - Show when no text or on desktop */}
+              {audioSupported && (!text.trim() || !isMobile) && (
+                <button
+                  type="button"
+                  className={`btn btn-ghost btn-circle touch-manipulation ${
+                    isMobile ? 'btn-sm' : 'btn-sm'
+                  }`}
+                  onClick={() => setShowVoiceRecorder(true)}
+                  title="Record voice note"
+                  disabled={isUploading}
+                >
+                  <Mic className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} ${
+                    !text.trim() ? 'text-primary' : 'text-base-content'
+                  }`} />
+                </button>
+              )}
+
+              {/* Emoji Button - Show when text exists or not small mobile */}
+              {(text.trim() || !isSmallMobile) && !(!text.trim() && audioSupported && isMobile) && (
                 <button
                   type="button"
                   className={`btn btn-ghost btn-circle touch-manipulation ${
@@ -249,8 +326,8 @@ const MessageInput = ({ isMobile = false }) => {
             isMobile ? 'text-xs' : 'text-xs'
           }`}>
             {isMobile 
-              ? 'Tap to send • Support: Images, Docs, Videos'
-              : 'Press Enter to send • Shift + Enter for new line • Support: Images, Documents, Videos, Audio'
+              ? `Tap to send • Support: Images, Docs, Videos${audioSupported ? ', Voice' : ''}`
+              : `Press Enter to send • Shift + Enter for new line • Support: Images, Documents, Videos, Audio${audioSupported ? ', Voice Notes' : ''}`
             }
           </p>
         )}

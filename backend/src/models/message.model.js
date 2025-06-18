@@ -75,20 +75,29 @@ const messageSchema = new mongoose.Schema(
     thumbnail: String, // For images/videos
     fileType: {
       type: String,
-      enum: ['image', 'document', 'video', 'audio', 'other']
+      enum: ['image', 'document', 'video', 'audio','voice', 'other']
     },
     isCompressed: Boolean,
     compressionRatio: Number,
     dimensions: {
       width: Number,
       height: Number
-    }
+    },
+      // NEW: Voice-specific fields
+  duration: {
+    type: Number, // Duration in seconds
+    default: 0
+  },
+  waveform: {
+    type: [Number], // Array of amplitude values for waveform visualization
+    default: []
+  }
   },
   
   // 🔥 NEW: Message content type
   messageSubType: {
     type: String,
-    enum: ['text', 'image', 'document', 'file', 'audio', 'video'],
+    enum: ['text', 'image', 'document', 'file', 'audio', 'video','voice'],
     default: 'text'
   },
   },
@@ -102,6 +111,21 @@ messageSchema.index({ messageType: 1 });
 messageSchema.index({ receiverId: 1, isRead: 1 }); // For unread direct messages
 messageSchema.index({ groupId: 1, 'readBy.user': 1 }); // For unread group messages
 messageSchema.index({ 'file.fileType': 1 });
+messageSchema.index({ "text": 1 });
+messageSchema.index({ "file.originalName": 1 });
+messageSchema.index({ 
+  "senderId": 1, 
+  "receiverId": 1, 
+  "createdAt": -1 
+});
+messageSchema.index({ 
+  "groupId": 1, 
+  "createdAt": -1 
+});
+messageSchema.index({ 
+  "messageType": 1, 
+  "createdAt": -1 
+});
 
 const Message = mongoose.model("Message", messageSchema);
 

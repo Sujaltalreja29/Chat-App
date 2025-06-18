@@ -347,6 +347,64 @@ sendMessage: async (messageData) => {
   }
 },
 
+// 🆕 Send voice note function
+// Update the sendVoiceNote function to properly handle real-time updates:
+// 🔧 FIXED: Voice note sending function
+sendVoiceNote: async ({ audioBlob, duration, waveform, receiverId, groupId, chatType }) => {
+  const { messages } = get();
+  const { authUser } = useAuthStore.getState();
+  
+  try {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "voice-note.webm");
+    formData.append("duration", duration.toString());
+    formData.append("waveform", JSON.stringify(waveform));
+
+    let res;
+    if (chatType === 'group' && groupId) {
+      res = await axiosInstance.post(`/voice/group/${groupId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    } else if (chatType === 'direct' && receiverId) {
+      res = await axiosInstance.post(`/voice/${receiverId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    } else {
+      throw new Error("Invalid chat configuration");
+    }
+
+    // 🔧 FIXED: Don't manually add to messages - let socket handle it
+    // The message will be received via socket and added through subscribeToMessages
+    console.log("✅ Voice note sent successfully");
+    
+    // Update sidebar with new voice message only if socket doesn't handle it
+    // This is a fallback for immediate UI feedback
+    if (res && res.data) {
+      const messageWithSender = {
+        ...res.data,
+        senderId: {
+          _id: authUser._id,
+          fullName: authUser.fullName,
+          profilePic: authUser.profilePic
+        }
+      };
+      
+      // Update sidebar (but not current messages - socket will handle that)
+      if (chatType === 'direct') {
+        get().updateUserLastMessage(receiverId, messageWithSender);
+      } else if (chatType === 'group') {
+        get().updateGroupLastMessage(groupId, messageWithSender);
+      }
+    }
+    
+    return res.data;
+    
+  } catch (error) {
+    console.error("Error sending voice note:", error);
+    throw error;
+  }
+},
+
   // 🔥 NEW: Update user's last message in sidebar
   updateUserLastMessage: (userId, message) => {
     const { users } = get();
@@ -386,52 +444,58 @@ subscribeToMessages: () => {
     socket.off("typingUpdate");
     
     // Handle new direct messages
-      socket.on("newMessage", (newMessage) => {
-        const { selectedUser, chatType } = get();
-        const isFromSelectedUser = selectedUser && (
-          newMessage.senderId === selectedUser._id || 
-          newMessage.senderId._id === selectedUser._id
+    socket.on("newMessage", (newMessage) => {
+      console.log("📥 Received new message:", newMessage);
+      const { selectedUser, chatType } = get();
+      const isFromSelectedUser = selectedUser && (
+        newMessage.senderId === selectedUser._id || 
+        (newMessage.senderId._id && newMessage.senderId._id === selectedUser._id)
+      );
+      
+      if (chatType === 'direct' && isFromSelectedUser) {
+        console.log("📥 Adding message to current chat");
+        set({ messages: [...get().messages, newMessage] });
+        get().markMessagesAsRead(selectedUser._id, 'direct');
+      } else {
+        console.log("📥 Adding message to sidebar notification");
+        get().handleNewMessageNotification(newMessage, 'direct');
+      }
+    });
+
+    // Handle new group messages (including voice notes)
+    socket.on("newGroupMessage", (newMessage) => {
+      console.log("📥 Received new group message:", newMessage);
+      const { selectedGroup, chatType } = get();
+      const isFromSelectedGroup = selectedGroup && newMessage.groupId === selectedGroup._id;
+      
+      if (chatType === 'group' && isFromSelectedGroup) {
+        console.log("📥 Adding group message to current chat");
+        set({ messages: [...get().messages, newMessage] });
+        get().markMessagesAsRead(selectedGroup._id, 'group');
+      } else {
+        console.log("📥 Adding group message to sidebar notification");
+        get().handleNewMessageNotification(newMessage, 'group');
+      }
+    });
+
+    // Handle typing updates
+    socket.on("typingUpdate", (data) => {
+      const { selectedUser, selectedGroup, chatType } = get();
+      let currentChatId;
+      
+      if (chatType === 'group' && selectedGroup) {
+        currentChatId = `group:${selectedGroup._id}`;
+      } else if (chatType === 'direct' && selectedUser) {
+        currentChatId = `direct:${[selectedUser._id, authUser._id].sort().join('-')}`;
+      }
+      
+      if (data.chatId === currentChatId) {
+        const otherTypingUsers = data.typingUsers.filter(
+          user => user.userId !== authUser._id
         );
-        
-        if (chatType === 'direct' && isFromSelectedUser) {
-          set({ messages: [...get().messages, newMessage] });
-          get().markMessagesAsRead(selectedUser._id, 'direct');
-        } else {
-          get().handleNewMessageNotification(newMessage, 'direct');
-        }
-      });
-
-    // Handle new group messages  
-      socket.on("newGroupMessage", (newMessage) => {
-        const { selectedGroup, chatType } = get();
-        const isFromSelectedGroup = selectedGroup && newMessage.groupId === selectedGroup._id;
-        
-        if (chatType === 'group' && isFromSelectedGroup) {
-          set({ messages: [...get().messages, newMessage] });
-          get().markMessagesAsRead(selectedGroup._id, 'group');
-        } else {
-          get().handleNewMessageNotification(newMessage, 'group');
-        }
-      });
-
-            socket.on("typingUpdate", (data) => {
-        const { selectedUser, selectedGroup, chatType } = get();
-        let currentChatId;
-        
-        if (chatType === 'group' && selectedGroup) {
-          currentChatId = `group:${selectedGroup._id}`;
-        } else if (chatType === 'direct' && selectedUser) {
-          currentChatId = `direct:${[selectedUser._id, authUser._id].sort().join('-')}`;
-        }
-        
-        if (data.chatId === currentChatId) {
-          // Filter out current user from typing users
-          const otherTypingUsers = data.typingUsers.filter(
-            user => user.userId !== authUser._id
-          );
-          set({ typingUsers: otherTypingUsers });
-        }
-      });
+        set({ typingUsers: otherTypingUsers });
+      }
+    });
 
 
     // Other socket events...

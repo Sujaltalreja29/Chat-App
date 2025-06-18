@@ -3,6 +3,7 @@ import { ArrowLeft, Phone, Video, MoreVertical, Users } from "lucide-react";
 import { useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { useSearchStore } from "../store/useSearchStore"; // ADD THIS
 import GroupInfo from "./GroupInfo";
 import FriendProfile from "./FriendProfile";
 
@@ -12,6 +13,13 @@ const MobileChatHeader = ({ onBack }) => {
   
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showFriendProfile, setShowFriendProfile] = useState(false);
+
+  const { toggleConversationSearch } = useSearchStore();
+
+    const handleConversationSearch = () => {
+    const chatId = chatType === 'group' ? selectedGroup?._id : selectedUser?._id;
+    toggleConversationSearch(chatId, chatType);
+  };
 
   if (chatType === 'group' && selectedGroup) {
     const onlineMembers = selectedGroup.members?.filter(member => 
@@ -59,17 +67,24 @@ const MobileChatHeader = ({ onBack }) => {
             </p>
           </button>
 
-          <div className="flex items-center gap-1">
-            <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
-              <Phone className="w-4 h-4" />
-            </button>
-            <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
-              <Video className="w-4 h-4" />
-            </button>
-            <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
-              <MoreVertical className="w-4 h-4" />
-            </button>
-          </div>
+  <div className="flex items-center gap-1">
+    <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
+      <Phone className="w-4 h-4" />
+    </button>
+    <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
+      <Video className="w-4 h-4" />
+    </button>
+    <button 
+      onClick={handleConversationSearch}  // ADD THIS
+      className="btn btn-ghost btn-sm btn-circle touch-manipulation"
+      title="Search in chat"
+    >
+      <Search className="w-4 h-4" />  {/* ADD THIS */}
+    </button>
+    <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
+      <MoreVertical className="w-4 h-4" />
+    </button>
+  </div>
         </div>
 
         {/* Group Info Modal */}
@@ -127,17 +142,24 @@ const MobileChatHeader = ({ onBack }) => {
             </p>
           </button>
 
-          <div className="flex items-center gap-1">
-            <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
-              <Phone className="w-4 h-4" />
-            </button>
-            <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
-              <Video className="w-4 h-4" />
-            </button>
-            <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
-              <MoreVertical className="w-4 h-4" />
-            </button>
-          </div>
+  <div className="flex items-center gap-1">
+    <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
+      <Phone className="w-4 h-4" />
+    </button>
+    <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
+      <Video className="w-4 h-4" />
+    </button>
+    <button 
+      onClick={handleConversationSearch}  // ADD THIS
+      className="btn btn-ghost btn-sm btn-circle touch-manipulation"
+      title="Search in chat"
+    >
+      <Search className="w-4 h-4" />  {/* ADD THIS */}
+    </button>
+    <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
+      <MoreVertical className="w-4 h-4" />
+    </button>
+  </div>
         </div>
 
         {/* Friend Profile Modal */}

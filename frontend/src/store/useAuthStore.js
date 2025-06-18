@@ -85,31 +85,51 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  connectSocket: () => {
-    const { authUser } = get();
-    if (!authUser || get().socket?.connected) return;
+connectSocket: () => {
+  const { authUser } = get();
+  if (!authUser || get().socket?.connected) return;
 
-    const socket = io(BASE_URL, {
-      query: {
-        userId: authUser._id,
-      },
-    });
-    socket.connect();
+  // 🔧 FIXED: Use correct base URL without /api
+  const socketURL = import.meta.env.MODE === "development" ? "http://localhost:5001" : "http://localhost:5001";
+  
+  const socket = io(socketURL, {
+    query: {
+      userId: authUser._id,
+    },
+    // 🔧 Add connection options for better reliability
+    transports: ['websocket', 'polling'],
+    upgrade: true,
+    rememberUpgrade: true,
+  });
 
-    set({ socket: socket });
+  set({ socket: socket });
 
-    socket.on("getOnlineUsers", (userIds) => {
-      set({ onlineUsers: userIds });
-    });
-    // Add friend request notifications
-    socket.on("friendRequestReceived", (data) => {
-      // Handle in useFriendStore
-    });
+  // 🔧 Add connection event handlers
+  socket.on("connect", () => {
+    console.log("🔌 Socket connected successfully:", socket.id);
+  });
 
-    socket.on("friendRequestAccepted", (data) => {
-      // Handle in useFriendStore
-    });
-  },
+  socket.on("disconnect", (reason) => {
+    console.log("🔌 Socket disconnected:", reason);
+  });
+
+  socket.on("connect_error", (error) => {
+    console.error("🔌 Socket connection error:", error);
+  });
+
+  socket.on("getOnlineUsers", (userIds) => {
+    set({ onlineUsers: userIds });
+  });
+
+  // Add friend request notifications
+  socket.on("friendRequestReceived", (data) => {
+    // Handle in useFriendStore
+  });
+
+  socket.on("friendRequestAccepted", (data) => {
+    // Handle in useFriendStore
+  });
+},
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();
     set({ socket: null }); // 🔥 Clear socket from state

@@ -6,10 +6,25 @@ import {
   Music, 
   FileText,
   Eye,
-  ExternalLink
+  ExternalLink,
+  Play,  // 🆕 Add Play icon
+  Pause  // 🆕 Add Pause icon
 } from "lucide-react";
+import { useAudioPlayer } from "../hooks/useAudioPlayer"; // 🆕 Import audio player hook
+import AudioWaveform from "./AudioWaveform"; // 🆕 Import waveform component
+import { formatAudioTime } from "../constants/audioConfig"; // 🆕 Import time formatter
 
-const FileMessage = ({ file, isOwn }) => {
+const FileMessage = ({ file, isOwn, isMobile = false }) => {
+  // 🆕 Audio player for voice messages
+  const {
+    isPlaying,
+    togglePlay,
+    currentTimeFormatted,
+    durationFormatted,
+    progress,
+    isLoading
+  } = useAudioPlayer(file?.fileType === 'voice' ? file?.url : null);
+
   // Format file size
   const formatFileSize = (bytes) => {
     if (!bytes) return '0 Bytes';
@@ -25,6 +40,7 @@ const FileMessage = ({ file, isOwn }) => {
     if (fileType === 'image') return <ImageIcon className={iconClass} />;
     if (fileType === 'video') return <Video className={iconClass} />;
     if (fileType === 'audio') return <Music className={iconClass} />;
+    if (fileType === 'voice') return <Music className={iconClass} />; // 🆕 Voice icon
     if (fileType === 'document') return <FileText className={iconClass} />;
     return <File className={iconClass} />;
   };
@@ -35,6 +51,7 @@ const FileMessage = ({ file, isOwn }) => {
       case 'image': return 'text-green-600';
       case 'video': return 'text-purple-600';
       case 'audio': return 'text-blue-600';
+      case 'voice': return 'text-primary'; // 🆕 Voice color
       case 'document': return 'text-red-600';
       default: return 'text-gray-600';
     }
@@ -44,7 +61,7 @@ const FileMessage = ({ file, isOwn }) => {
   const handleDownload = () => {
     const link = document.createElement('a');
     link.href = file.url;
-    link.download = file.originalName;
+    link.download = file.originalName || `voice-note-${Date.now()}.mp3`;
     link.target = '_blank';
     document.body.appendChild(link);
     link.click();
@@ -55,6 +72,85 @@ const FileMessage = ({ file, isOwn }) => {
   const handlePreview = () => {
     window.open(file.url, '_blank');
   };
+
+  // 🆕 Render voice message (special layout)
+  if (file.fileType === 'voice') {
+    const displayDuration = file.duration || 0;
+    const displayDurationFormatted = formatAudioTime(displayDuration);
+    
+    return (
+      <div className={`
+        flex items-center gap-3 rounded-lg max-w-sm
+        ${isMobile ? 'p-2' : 'p-3'}
+        ${isOwn 
+          ? 'bg-primary/20 text-primary-content' 
+          : 'bg-base-300/50 text-base-content'
+        }
+      `}>
+        
+        {/* Play/Pause Button */}
+        <button
+          onClick={togglePlay}
+          className={`
+            btn btn-circle
+            ${isMobile ? 'btn-sm' : 'btn-sm'}
+            ${isOwn 
+              ? 'btn-primary text-primary-content' 
+              : 'btn-primary'
+            }
+          `}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <div className="loading loading-spinner loading-xs" />
+          ) : isPlaying ? (
+            <Pause size={isMobile ? 12 : 14} />
+          ) : (
+            <Play size={isMobile ? 12 : 14} />
+          )}
+        </button>
+        
+        {/* Waveform and Duration */}
+        <div className="flex-1 min-w-0">
+          <AudioWaveform
+            data={file.waveform || []}
+            isRecording={false}
+            progress={progress}
+            height={isMobile ? 20 : 24}
+            className="mb-1"
+            color={isOwn ? 'rgba(255, 255, 255, 0.6)' : 'rgba(156, 163, 175, 0.6)'}
+            activeColor={isOwn ? '#ffffff' : '#3b82f6'}
+          />
+          
+          <div className={`flex justify-between items-center opacity-70 ${
+            isMobile ? 'text-xs' : 'text-xs'
+          }`}>
+            <span>
+              {isPlaying ? currentTimeFormatted : '0:00'}
+            </span>
+            <span className="font-mono">
+              {displayDurationFormatted}
+            </span>
+          </div>
+        </div>
+        
+        {/* Download Button */}
+        <button
+          onClick={handleDownload}
+          className={`
+            btn btn-ghost btn-xs
+            ${isOwn 
+              ? 'text-primary-content/70 hover:text-primary-content' 
+              : 'text-base-content/70 hover:text-base-content'
+            }
+          `}
+          title="Download voice note"
+        >
+          <Download size={isMobile ? 10 : 12} />
+        </button>
+      </div>
+    );
+  }
 
   // Render image file
   if (file.fileType === 'image') {
@@ -122,7 +218,7 @@ const FileMessage = ({ file, isOwn }) => {
     );
   }
 
-  // Render audio file
+  // Render audio file (regular audio, not voice notes)
   if (file.fileType === 'audio') {
     return (
       <div className="max-w-[350px]">
@@ -157,7 +253,7 @@ const FileMessage = ({ file, isOwn }) => {
         ? 'bg-primary/10 border-primary/20' 
         : 'bg-base-300 border-base-content/20'
       }
-    `}>
+          `}>
       {/* File Icon */}
       <div className={`flex-shrink-0 ${getFileTypeColor(file.fileType)}`}>
         {getFileIcon(file.fileType)}
@@ -195,3 +291,4 @@ const FileMessage = ({ file, isOwn }) => {
 };
 
 export default FileMessage;
+    
