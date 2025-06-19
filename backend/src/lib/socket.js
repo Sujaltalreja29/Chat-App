@@ -208,16 +208,26 @@ socket.on("call:initiate", ({ to, offer, callType = 'voice' }) => {
   });
 
   // Handle call status updates (mute, unmute, etc.)
-  socket.on("call:status-update", ({ to, callId, status }) => {
-    const receiverSocketId = getReceiverSocketId(to);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("call:status-update", {
-        from: userId,
-        callId,
-        status
-      });
-    }
-  });
+// In backend/src/lib/socket.js - ADD/UPDATE this handler:
+
+// In backend/src/lib/socket.js - ADD this handler if it doesn't exist:
+
+socket.on("call:ice-candidate", ({ to, candidate, callId }) => {
+  console.log(`📞 🧊 BACKEND: ICE candidate received from ${userId} to ${to}`);
+  console.log(`📞 🧊 BACKEND: Candidate type: ${candidate.type}, callId: ${callId.slice(-8)}`);
+  
+  const receiverSocketId = getReceiverSocketId(to);
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("call:ice-candidate", {
+      from: userId,
+      candidate,
+      callId
+    });
+    console.log(`📞 ✅ BACKEND: ICE candidate forwarded to ${to}`);
+  } else {
+    console.log(`📞 ❌ BACKEND: User ${to} not found for ICE candidate`);
+  }
+});
 
   // 🔥 NEW: Join group rooms for typing indicators
   socket.on("joinGroup", ({ groupId }) => {

@@ -3,16 +3,22 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useCallStore } from '../store/useCallStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { getAudioConstraints } from '../utils/audioUtils';
+import { AudioProcessor } from '../utils/audioProcessor';
 import toast from 'react-hot-toast';
 
 // WebRTC Configuration
 const rtcConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' }
   ],
-  iceCandidatePoolSize: 10
+  iceCandidatePoolSize: 10,
+  // Add debug logging
+  iceTransportPolicy: 'all' // Allow both STUN and TURN
 };
+
+console.log('📞 🧊 Using ICE servers:', rtcConfiguration.iceServers);
 
 export const useWebRTC = () => {
   const {
@@ -24,141 +30,146 @@ export const useWebRTC = () => {
     currentCall,
     resetCallState
   } = useCallStore();
-  
+  const audioProcessorRef = useRef(null);
+
   const { socket, authUser } = useAuthStore();
   const iceCandidatesQueue = useRef([]);
   
   // Create peer connection
+// In useWebRTC.js - UPDATE the createPeerConnection function:
+
+// In useWebRTC.js - UPDATE the createPeerConnection function:
+
+// In useWebRTC.js - UPDATE the createPeerConnection function:
+
 const createPeerConnection = useCallback(() => {
   try {
+    console.log('📞 🧊 Creating peer connection with config:', rtcConfiguration);
     const pc = new RTCPeerConnection(rtcConfiguration);
     
-    // Handle ICE candidates
+    // 🔥 FIX: Handle ICE candidates with detailed debugging
     pc.onicecandidate = (event) => {
-      if (event.candidate && currentCall) {
-        console.log('📞 Sending ICE candidate:', event.candidate.type);
-        socket?.emit('call:ice-candidate', {
-          to: currentCall.otherUserId,
-          candidate: event.candidate,
-          callId: currentCall.callId
+      console.log('📞 🧊 ICE candidate event fired:', !!event.candidate);
+      
+      if (event.candidate) {
+        console.log('📞 🧊 Sending ICE candidate:', {
+          type: event.candidate.type,
+          protocol: event.candidate.protocol,
+          address: event.candidate.address || 'hidden',
+          port: event.candidate.port,
+          foundation: event.candidate.foundation,
+          component: event.candidate.component,
+          priority: event.candidate.priority
         });
-      } else if (!event.candidate) {
-        console.log('📞 ICE gathering completed');
+        
+        // 🔥 CRITICAL: Check if we have currentCall and socket
+        const { currentCall } = useCallStore.getState();
+        console.log('📞 🧊 Current call available:', !!currentCall);
+        console.log('📞 🧊 Socket available:', !!socket);
+        
+        if (currentCall && socket) {
+          console.log('📞 🧊 Emitting ICE candidate to:', currentCall.otherUserId);
+          socket.emit('call:ice-candidate', {
+            to: currentCall.otherUserId,
+            candidate: event.candidate,
+            callId: currentCall.callId
+          });
+          console.log('📞 ✅ ICE candidate emitted successfully');
+        } else {
+          console.error('📞 ❌ Cannot send ICE candidate - missing currentCall or socket');
+        }
+      } else {
+        console.log('📞 🧊 ICE gathering completed');
       }
     };
     
     // Handle remote stream
-pc.ontrack = (event) => {
-  console.log('📞 Received remote stream:', event.streams.length, 'streams');
-  const [remoteStream] = event.streams;
-  setRemoteStream(remoteStream);
-  
-  // 🔥 FIX: Check connection state after receiving stream
-  console.log('📞 Checking connection state after receiving remote stream...');
-  
-  const checkConnection = () => {
-    const currentState = useCallStore.getState();
-    console.log('📞 Current peer connection states:', {
-      connectionState: pc.connectionState,
-      iceConnectionState: pc.iceConnectionState,
-      iceGatheringState: pc.iceGatheringState,
-      signalingState: pc.signalingState,
-      callStatus: currentState.callStatus,
-      hasCurrentCall: !!currentState.currentCall
-    });
-    
-    // 🔥 FIX: Mark as connected for BOTH incoming and outgoing calls
-    if (currentState.callStatus === 'connecting' && currentState.currentCall) {
-      const callType = currentState.currentCall.type;
-      console.log(`📞 Have remote stream and connecting (${callType} call) - marking as connected!`);
-      setCallStatus('connected');
-      toast.success('Call connected!');
-      return true;
-    }
-    return false;
-  };
-  
-  // Check immediately
-  if (!checkConnection()) {
-    // Check again after 1 second
-    setTimeout(() => {
-      if (!checkConnection()) {
-        // Check again after 3 seconds
-        setTimeout(checkConnection, 3000);
-      }
-    }, 1000);
-  }
-};
+    pc.ontrack = (event) => {
+      console.log('📞 Received remote stream:', event.streams.length, 'streams');
+      const [remoteStream] = event.streams;
+      setRemoteStream(remoteStream);
+      console.log('📞 Remote stream received, waiting for ICE connection...');
+    };
     
     // Handle connection state changes
     pc.onconnectionstatechange = () => {
-      console.log('📞 Connection state changed to:', pc.connectionState);
-      console.log('📞 ICE connection state:', pc.iceConnectionState);
-      console.log('📞 ICE gathering state:', pc.iceGatheringState);
+      console.log('📞 🔗 Connection state changed to:', pc.connectionState);
       
       switch (pc.connectionState) {
         case 'connecting':
-          console.log('📞 WebRTC connecting...');
-          // Keep current status
+          console.log('📞 🔗 WebRTC connecting...');
           break;
         case 'connected':
-          console.log('📞 WebRTC connection established successfully!');
+          console.log('📞 ✅ WebRTC connection established successfully!');
           setCallStatus('connected');
+          toast.success('Call connected!');
           break;
         case 'disconnected':
-          console.log('📞 WebRTC disconnected - might reconnect');
+          console.log('📞 ⚠️ WebRTC disconnected');
           break;
         case 'failed':
-          console.log('📞 WebRTC connection failed');
-          if (useCallStore.getState().callStatus !== 'ended') {
-            setCallStatus('ended');
-            toast.error('Call connection failed');
-          }
+          console.log('📞 ❌ WebRTC connection failed');
+          setCallStatus('ended');
+          toast.error('Call connection failed');
           break;
         case 'closed':
-          console.log('📞 WebRTC connection closed');
+          console.log('📞 📪 WebRTC connection closed');
           break;
       }
     };
     
-    // Handle ICE connection state (more reliable than connection state sometimes)
+    // 🔥 CRITICAL: Handle ICE connection state changes
     pc.oniceconnectionstatechange = () => {
-      console.log('📞 ICE connection state changed to:', pc.iceConnectionState);
+      console.log('📞 🧊 ICE connection state changed to:', pc.iceConnectionState);
       
       switch (pc.iceConnectionState) {
+        case 'new':
+          console.log('📞 🧊 ICE connection: new');
+          break;
+        case 'gathering':
+          console.log('📞 🧊 ICE gathering candidates...');
+          break;
         case 'checking':
-          console.log('📞 ICE checking connectivity...');
+          console.log('📞 🧊 ICE checking connectivity...');
           break;
         case 'connected':
-        case 'completed':
-          console.log('📞 ICE connection successful!');
-          // 🔥 FIX: Use ICE state as backup for connection detection
+          console.log('📞 ✅ ICE connection successful! Audio should now flow.');
           const currentStatus = useCallStore.getState().callStatus;
           if (currentStatus === 'connecting') {
-            console.log('📞 ICE connected - setting call status to connected');
             setCallStatus('connected');
+            toast.success('Call connected - audio flowing!');
+          }
+          break;
+        case 'completed':
+          console.log('📞 ✅ ICE connection completed!');
+          const currentStatus2 = useCallStore.getState().callStatus;
+          if (currentStatus2 === 'connecting') {
+            setCallStatus('connected');
+            toast.success('Call connected - audio flowing!');
           }
           break;
         case 'disconnected':
-          console.log('📞 ICE disconnected - might reconnect');
+          console.log('📞 ⚠️ ICE disconnected');
           break;
         case 'failed':
-          console.log('📞 ICE connection failed, attempting restart');
-          try {
-            pc.restartIce();
-          } catch (error) {
-            console.error('Failed to restart ICE:', error);
-          }
+          console.log('📞 ❌ ICE connection failed');
+          setCallStatus('ended');
+          toast.error('Call connection failed');
           break;
         case 'closed':
-          console.log('📞 ICE connection closed');
+          console.log('📞 📪 ICE connection closed');
           break;
       }
     };
     
-    // 🔥 NEW: Additional state monitoring
+    // Handle ICE gathering state
+    pc.onicegatheringstatechange = () => {
+      console.log('📞 🧊 ICE gathering state changed to:', pc.iceGatheringState);
+    };
+    
+    // Signaling state changes
     pc.onsignalingstatechange = () => {
-      console.log('📞 Signaling state changed to:', pc.signalingState);
+      console.log('📞 📋 Signaling state changed to:', pc.signalingState);
     };
     
     setPeerConnection(pc);
@@ -168,77 +179,101 @@ pc.ontrack = (event) => {
     toast.error('Failed to initialize call');
     return null;
   }
-}, [setPeerConnection, setRemoteStream, setCallStatus, currentCall, socket]);
+}, [setPeerConnection, setRemoteStream, setCallStatus, socket]); // 🔥 ADD socket to dependencies
   
   // Get local media stream
-  const getLocalStream = useCallback(async () => {
-    try {
-      const constraints = getAudioConstraints();
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      setLocalStream(stream);
-      return stream;
-    } catch (error) {
-      console.error('📞 Error getting local stream:', error);
-      
-      if (error.name === 'NotAllowedError') {
-        toast.error('Microphone access denied. Please allow microphone permissions.');
-      } else if (error.name === 'NotFoundError') {
-        toast.error('No microphone found. Please check your audio devices.');
-      } else {
-        toast.error('Failed to access microphone');
-      }
-      
-      throw error;
-    }
-  }, [setLocalStream]);
+// UPDATE the getLocalStream function:
+const getLocalStream = useCallback(async () => {
+  try {
+    const constraints = getAudioConstraints();
+    const rawStream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    // 🔥 Apply audio processing for noise reduction
+    audioProcessorRef.current = new AudioProcessor();
+    const processedStream = await audioProcessorRef.current.setupAudioProcessing(rawStream);
+    
+    console.log('🎤 Audio stream processed for noise reduction');
+    setLocalStream(processedStream);
+    return processedStream;
+    
+  } catch (error) {
+    console.error('📞 Error getting local stream:', error);
+    // ... existing error handling
+    throw error;
+  }
+}, [setLocalStream]);
   
   // Create offer (caller)
-  const createOffer = useCallback(async (pc, stream) => {
-    try {
-      // Add local stream to peer connection
-      stream.getTracks().forEach(track => {
-        pc.addTrack(track, stream);
-      });
-      
-      // Create and set local description
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      
-      return offer;
-    } catch (error) {
-      console.error('📞 Error creating offer:', error);
-      throw error;
-    }
-  }, []);
+const createOffer = useCallback(async (pc, stream) => {
+  try {
+    console.log('📤 Adding local stream tracks to peer connection');
+    
+    // Add local stream to peer connection
+    stream.getTracks().forEach(track => {
+      console.log('📤 Adding track:', track.kind, track.enabled, track.readyState);
+      pc.addTrack(track, stream);
+    });
+    
+    // Verify tracks were added
+    const senders = pc.getSenders();
+    console.log('📤 Peer connection senders:', senders.length);
+    senders.forEach((sender, index) => {
+      console.log(`📤 Sender ${index}:`, sender.track?.kind, sender.track?.enabled);
+    });
+    
+    // Create and set local description
+    const offer = await pc.createOffer({
+      offerToReceiveAudio: true, // 🔥 IMPORTANT: Explicitly request audio
+      offerToReceiveVideo: false
+    });
+    
+    await pc.setLocalDescription(offer);
+    console.log('📤 Offer created and local description set');
+    
+    return offer;
+  } catch (error) {
+    console.error('📞 Error creating offer:', error);
+    throw error;
+  }
+}, []);
+
   
   // Create answer (callee)
-  const createAnswer = useCallback(async (pc, stream, offer) => {
-    try {
-      // Add local stream to peer connection
-      stream.getTracks().forEach(track => {
-        pc.addTrack(track, stream);
-      });
-      
-      // Set remote description
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      
-      // Process queued ICE candidates
-      while (iceCandidatesQueue.current.length > 0) {
-        const candidate = iceCandidatesQueue.current.shift();
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      }
-      
-      // Create and set local description
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      
-      return answer;
-    } catch (error) {
-      console.error('📞 Error creating answer:', error);
-      throw error;
+const createAnswer = useCallback(async (pc, stream, offer) => {
+  try {
+    console.log('📥 Adding local stream tracks to peer connection (answer)');
+    
+    // Add local stream to peer connection
+    stream.getTracks().forEach(track => {
+      console.log('📥 Adding track:', track.kind, track.enabled, track.readyState);
+      pc.addTrack(track, stream);
+    });
+    
+    // Set remote description first
+    await pc.setRemoteDescription(new RTCSessionDescription(offer));
+    console.log('📥 Remote description set');
+    
+    // Process queued ICE candidates
+    while (iceCandidatesQueue.current.length > 0) {
+      const candidate = iceCandidatesQueue.current.shift();
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
     }
-  }, []);
+    
+    // Create and set local description
+    const answer = await pc.createAnswer({
+      offerToReceiveAudio: true, // 🔥 IMPORTANT: Explicitly request audio
+      offerToReceiveVideo: false
+    });
+    
+    await pc.setLocalDescription(answer);
+    console.log('📥 Answer created and local description set');
+    
+    return answer;
+  } catch (error) {
+    console.error('📞 Error creating answer:', error);
+    throw error;
+  }
+}, []);
   
   // Handle received answer (caller)
   const handleAnswer = useCallback(async (answer) => {
@@ -261,24 +296,32 @@ pc.ontrack = (event) => {
   // Handle ICE candidate
 // In useWebRTC.js - UPDATE the handleIceCandidate function:
 
+// In useWebRTC.js - UPDATE the handleIceCandidate function:
+
 const handleIceCandidate = useCallback(async (candidate) => {
   try {
-    console.log('📞 Processing ICE candidate:', candidate.type, candidate);
+    console.log('📞 🧊 Processing received ICE candidate:', {
+      type: candidate.type,
+      protocol: candidate.protocol,
+      address: candidate.address,
+      port: candidate.port
+    });
     
     if (peerConnection) {
       if (peerConnection.remoteDescription) {
-        console.log('📞 Adding ICE candidate to peer connection');
+        console.log('📞 🧊 Adding ICE candidate to peer connection');
         await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-        console.log('✅ ICE candidate added successfully');
+        console.log('📞 ✅ ICE candidate added successfully');
       } else {
-        console.log('📞 Queueing ICE candidate (no remote description yet)');
+        console.log('📞 🧊 Queueing ICE candidate (no remote description yet)');
         iceCandidatesQueue.current.push(candidate);
+        console.log('📞 🧊 ICE candidates in queue:', iceCandidatesQueue.current.length);
       }
     } else {
-      console.log('❌ No peer connection available for ICE candidate');
+      console.log('📞 ❌ No peer connection available for ICE candidate');
     }
   } catch (error) {
-    console.error('📞 Error handling ICE candidate:', error);
+    console.error('📞 ❌ Error handling ICE candidate:', error);
   }
 }, [peerConnection]);
   
@@ -306,6 +349,14 @@ const handleIceCandidate = useCallback(async (candidate) => {
       iceCandidatesQueue.current = [];
     };
   }, []);
+  // Add cleanup in the hook:
+useEffect(() => {
+  return () => {
+    if (audioProcessorRef.current) {
+      audioProcessorRef.current.cleanup();
+    }
+  };
+}, []);
   
   return {
     createPeerConnection,

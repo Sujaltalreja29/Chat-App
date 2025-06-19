@@ -194,14 +194,32 @@ export const getOptimalRecordingOptions = () => {
  * Create audio constraints for getUserMedia
  * @returns {Object} Audio constraints
  */
+// In audioUtils.js - UPDATE the getAudioConstraints function:
+
 export const getAudioConstraints = () => {
   return {
     audio: {
+      // 🔥 Enhanced noise suppression
       echoCancellation: true,
       noiseSuppression: true,
       autoGainControl: true,
-      sampleRate: AUDIO_CONFIG.SAMPLE_RATE,
-      channelCount: AUDIO_CONFIG.CHANNELS
+      
+      // 🔥 NEW: Advanced audio processing
+      googEchoCancellation: true,
+      googAutoGainControl: true, 
+      googNoiseSuppression: true,
+      googHighpassFilter: true,
+      googTypingNoiseDetection: true,
+      googAudioMirroring: false,
+      
+      // 🔥 Audio quality settings
+      sampleRate: 48000,  // Higher sample rate for better quality
+      channelCount: 1,    // Mono for efficiency
+      latency: 0.1,       // Low latency
+      
+      // 🔥 Volume and sensitivity
+      volume: 1.0,
+      googDAEchoCancellation: true,
     }
   };
 };

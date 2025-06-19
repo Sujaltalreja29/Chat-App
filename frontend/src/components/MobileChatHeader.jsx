@@ -1,5 +1,5 @@
 // src/components/MobileChatHeader.jsx - Updated with clickable profiles
-import { ArrowLeft, Phone, Video, MoreVertical, Users } from "lucide-react";
+import { ArrowLeft, Phone, Video, MoreVertical, Users, Search } from "lucide-react";
 import { useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";

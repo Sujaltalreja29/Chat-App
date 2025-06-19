@@ -16,6 +16,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import DateSeparator from "./DateSeparator"; // ADD THIS IMPORT
 import { formatMessageTime, shouldShowDateSeparator } from "../lib/utils"; // UPDATE THIS IMPORT
 import { CheckCheck, MessageSquare, Hash, Search, X } from "lucide-react";
+import MobileChatHeader from "./MobileChatHeader";
 
 const ChatContainer = ({ onBackClick, isMobile = false }) => {
   const {

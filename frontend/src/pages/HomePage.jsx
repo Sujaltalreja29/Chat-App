@@ -81,7 +81,7 @@ const HomePage = () => {
     }`}>
       
       {/* State Viewer */}
-      <StateViewer />
+      {/* <StateViewer /> */}
       
       {/* Mobile Chat Header (only when chat is active) */}
       {showMobileLayout && hasActiveChat && showChat && (
