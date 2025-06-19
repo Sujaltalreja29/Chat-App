@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useSearchStore } from "../store/useSearchStore"; // ADD THIS
+import { useVoiceCall } from "../hooks/useVoiceCall";
 import GroupInfo from "./GroupInfo";
 import FriendProfile from "./FriendProfile";
 
 const MobileChatHeader = ({ onBack }) => {
   const { selectedUser, selectedGroup, chatType } = useChatStore();
   const { onlineUsers } = useAuthStore();
-  
+  const { initiateCall } = useVoiceCall();
   const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showFriendProfile, setShowFriendProfile] = useState(false);
 
@@ -68,9 +69,12 @@ const MobileChatHeader = ({ onBack }) => {
           </button>
 
   <div className="flex items-center gap-1">
-    <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
-      <Phone className="w-4 h-4" />
-    </button>
+    <button 
+  className="btn btn-ghost btn-sm btn-circle touch-manipulation"
+  onClick={() => toast.info('Group calls coming soon!')}
+>
+  <Phone className="w-4 h-4" />
+</button>
     <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
       <Video className="w-4 h-4" />
     </button>
@@ -143,9 +147,13 @@ const MobileChatHeader = ({ onBack }) => {
           </button>
 
   <div className="flex items-center gap-1">
-    <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
-      <Phone className="w-4 h-4" />
-    </button>
+    <button 
+  className="btn btn-ghost btn-sm btn-circle touch-manipulation"
+  onClick={() => initiateCall(selectedUser._id, selectedUser)}
+>
+  <Phone className="w-4 h-4" />
+</button>
+
     <button className="btn btn-ghost btn-sm btn-circle touch-manipulation">
       <Video className="w-4 h-4" />
     </button>

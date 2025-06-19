@@ -63,7 +63,7 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Search Bar */}
-          {authUser && !showMobileLayout && (
+          {/* {authUser && !showMobileLayout && (
             <div className="flex-1 max-w-lg mx-8">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/60 w-4 h-4" />
@@ -74,7 +74,7 @@ const Navbar = () => {
                 />
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Desktop Actions */}
           {!showMobileLayout && (
@@ -186,7 +186,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Search Bar */}
-        {showMobileLayout && authUser && showMobileSearch && !shouldShowMinimalNavbar && (
+        {/* {showMobileLayout && authUser && showMobileSearch && !shouldShowMinimalNavbar && (
           <div className="pb-3 border-t border-base-300 mt-3 pt-3 animate-slide-in-left">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/60 w-4 h-4" />
@@ -198,7 +198,7 @@ const Navbar = () => {
               />
             </div>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Mobile Menu Dropdown */}

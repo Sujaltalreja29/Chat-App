@@ -7,7 +7,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173","https://chat-app-sujaltlrj.vercel.app"],
     credentials: true,
   },
 });
@@ -121,6 +121,102 @@ io.on("connection", (socket) => {
     
     // Emit to other chat participants
     emitTypingUpdate(chatId, userInfo.userId);
+  });
+  
+  // 🔥 NEW: Voice Call Events
+// In backend/src/lib/socket.js - UPDATE the call:initiate handler:
+
+socket.on("call:initiate", ({ to, offer, callType = 'voice' }) => {
+  console.log(`📞 Call initiated from ${userId} to ${to}`);
+  
+  // 🔥 FIX: Get caller info from handshake
+  let fromUserInfo = null;
+  try {
+    if (socket.handshake.query.userInfo) {
+      fromUserInfo = JSON.parse(socket.handshake.query.userInfo);
+    }
+  } catch (error) {
+    console.error('Error parsing userInfo:', error);
+  }
+  
+  const receiverSocketId = getReceiverSocketId(to);
+  if (receiverSocketId) {
+    io.to(receiverSocketId).emit("call:incoming", {
+      from: userId,
+      fromUserInfo, // 🔥 FIX: Pass the parsed user info
+      offer,
+      callId: `${userId}-${to}-${Date.now()}`,
+      callType
+    });
+  } else {
+    // User is offline
+    socket.emit("call:failed", {
+      reason: "User is offline",
+      to
+    });
+  }
+});
+
+  socket.on("call:accept", ({ to, answer, callId }) => {
+    console.log(`📞 Call accepted from ${userId} to ${to}`);
+    
+    const receiverSocketId = getReceiverSocketId(to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("call:accepted", {
+        from: userId,
+        answer,
+        callId
+      });
+    }
+  });
+
+  socket.on("call:decline", ({ to, callId, reason = "Call declined" }) => {
+    console.log(`📞 Call declined from ${userId} to ${to}`);
+    
+    const receiverSocketId = getReceiverSocketId(to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("call:declined", {
+        from: userId,
+        callId,
+        reason
+      });
+    }
+  });
+
+  socket.on("call:end", ({ to, callId, reason = "Call ended" }) => {
+    console.log(`📞 Call ended from ${userId} to ${to}`);
+    
+    const receiverSocketId = getReceiverSocketId(to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("call:ended", {
+        from: userId,
+        callId,
+        reason
+      });
+    }
+  });
+
+  socket.on("call:ice-candidate", ({ to, candidate, callId }) => {
+    const receiverSocketId = getReceiverSocketId(to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("call:ice-candidate", {
+        from: userId,
+        candidate,
+        callId
+      });
+    }
+  });
+
+  // Handle call status updates (mute, unmute, etc.)
+  socket.on("call:status-update", ({ to, callId, status }) => {
+    const receiverSocketId = getReceiverSocketId(to);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("call:status-update", {
+        from: userId,
+        callId,
+        status
+      });
+    }
   });
 
   // 🔥 NEW: Join group rooms for typing indicators

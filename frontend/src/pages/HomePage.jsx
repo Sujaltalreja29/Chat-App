@@ -1,11 +1,15 @@
-// src/pages/HomePage.jsx - Fixed height layout
+// In HomePage.jsx - Fix the imports at the top:
+
 import { useState, useEffect } from "react";
 import { useChatStore } from "../store/useChatStore";
+import { useCallStore } from "../store/useCallStore"; // ADD this import
 import { useResponsive } from "../hooks/useResponsive";
 import Sidebar from "../components/Sidebar";
 import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer";
 import MobileChatHeader from "../components/MobileChatHeader";
+import IncomingCall from "../components/IncomingCall";
+import CallWindow from "../components/CallWindow";
 
 const HomePage = () => {
   const { selectedUser, selectedGroup, chatType } = useChatStore();
@@ -20,11 +24,9 @@ const HomePage = () => {
   // Handle responsive layout changes
   useEffect(() => {
     if (showMobileLayout) {
-      // Mobile: Show sidebar by default, chat when selected
       setShowSidebar(!hasActiveChat);
       setShowChat(hasActiveChat);
     } else {
-      // Desktop: Always show both
       setShowSidebar(true);
       setShowChat(true);
     }
@@ -38,12 +40,48 @@ const HomePage = () => {
     }
   };
 
+  // 🔥 FIX: Simple state viewer component
+  const StateViewer = () => {
+    const [currentState, setCurrentState] = useState({});
+    
+    useEffect(() => {
+      const interval = setInterval(() => {
+        const state = useCallStore.getState();
+        setCurrentState({
+          callStatus: state.callStatus,
+          showCallWindow: state.showCallWindow,
+          showIncomingCall: state.showIncomingCall,
+          hasCurrentCall: !!state.currentCall,
+          currentCallType: state.currentCall?.type,
+          otherUser: state.currentCall?.otherUserInfo?.fullName
+        });
+      }, 500);
+      
+      return () => clearInterval(interval);
+    }, []);
+    
+    return (
+      <div className="fixed top-4 left-4 z-[10000] bg-red-900 text-white p-3 text-xs max-w-sm">
+        <h3 className="text-yellow-400 font-bold">STATE:</h3>
+        <div>Status: <span className="text-green-400">{currentState.callStatus}</span></div>
+        <div>Show Window: <span className="text-blue-400">{currentState.showCallWindow ? 'YES' : 'NO'}</span></div>
+        <div>Show Incoming: <span className="text-purple-400">{currentState.showIncomingCall ? 'YES' : 'NO'}</span></div>
+        <div>Has Call: <span className="text-orange-400">{currentState.hasCurrentCall ? 'YES' : 'NO'}</span></div>
+        <div>Call Type: <span className="text-pink-400">{currentState.currentCallType || 'NONE'}</span></div>
+        <div>Other User: <span className="text-cyan-400">{currentState.otherUser || 'NONE'}</span></div>
+      </div>
+    );
+  };
+
   return (
     <div className={`bg-base-200 flex flex-col overflow-hidden ${
       showMobileLayout 
-        ? 'h-[calc(100vh-3rem)]' // Mobile: Account for minimal navbar
-        : 'h-[calc(100vh-5rem)]'  // Desktop: Account for full navbar
+        ? 'h-[calc(100vh-3rem)]'
+        : 'h-[calc(100vh-5rem)]'
     }`}>
+      
+      {/* State Viewer */}
+      <StateViewer />
       
       {/* Mobile Chat Header (only when chat is active) */}
       {showMobileLayout && hasActiveChat && showChat && (
@@ -113,6 +151,10 @@ const HomePage = () => {
           onClick={handleBackToSidebar}
         />
       )}
+
+      {/* Voice Call Components */}
+      <IncomingCall />
+      <CallWindow />
     </div>
   );
 };

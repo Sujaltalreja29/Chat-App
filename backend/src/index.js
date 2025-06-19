@@ -13,6 +13,7 @@ import friendRoutes from "./routes/friend.route.js";
 import groupRoutes from "./routes/group.route.js";
 import voiceNoteRoutes from "./routes/voiceNote.route.js";
 import searchRoutes from "./routes/search.route.js";  // ADD THIS
+import callRoutes from "./routes/call.route.js";
 import { app, server } from "./lib/socket.js";
 
 dotenv.config();
@@ -25,7 +26,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173","https://chat-app-sujaltlrj.vercel.app"],
     credentials: true,
   })
 );
@@ -37,6 +38,7 @@ app.use("/api/friends", friendRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/voice", voiceNoteRoutes);
 app.use("/api/search", searchRoutes);  // ADD THIS
+app.use("/api/calls", callRoutes);
 
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));

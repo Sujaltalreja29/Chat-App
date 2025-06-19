@@ -3,7 +3,7 @@ import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5001/api" : "http://localhost:5001/api";
+const BASE_URL = import.meta.env.MODE === "development" ? "https://chat-app-g6hy.onrender.com/api" : "https://chat-app-g6hy.onrender.com/api";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -89,18 +89,23 @@ connectSocket: () => {
   const { authUser } = get();
   if (!authUser || get().socket?.connected) return;
 
-  // 🔧 FIXED: Use correct base URL without /api
-  const socketURL = import.meta.env.MODE === "development" ? "http://localhost:5001" : "http://localhost:5001";
+  const socketURL = import.meta.env.MODE === "development" ? "https://chat-app-g6hy.onrender.com/api" : "https://chat-app-g6hy.onrender.com/api";
   
   const socket = io(socketURL, {
     query: {
       userId: authUser._id,
+      // 🔥 ADD: Pass user info for calls
+      userInfo: JSON.stringify({
+        _id: authUser._id,
+        fullName: authUser.fullName,
+        profilePic: authUser.profilePic
+      })
     },
-    // 🔧 Add connection options for better reliability
     transports: ['websocket', 'polling'],
     upgrade: true,
     rememberUpgrade: true,
   });
+
 
   set({ socket: socket });
 

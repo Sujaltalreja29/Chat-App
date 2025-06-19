@@ -4,6 +4,7 @@ import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useGroupStore } from "../store/useGroupStore";
 import { useSearchStore } from "../store/useSearchStore"; // ADD THIS
+import { useVoiceCall } from "../hooks/useVoiceCall";
 import { 
   X, Phone, Video, MoreVertical, ArrowLeft, 
   Users, Crown, Settings, UserMinus, LogOut,
@@ -21,7 +22,7 @@ const ChatHeader = () => {
     selectedUser, selectedGroup, setSelectedUser, 
     setSelectedGroup, chatType, clearChat 
   } = useChatStore();
-  
+  const { initiateCall } = useVoiceCall();
   const { onlineUsers, authUser } = useAuthStore();
   const { leaveGroup, deleteGroup } = useGroupStore();
 
@@ -129,9 +130,17 @@ const ChatHeader = () => {
               </button>
 
               {/* Voice Call Button */}
-              <button className="btn btn-ghost btn-sm btn-circle" title="Voice Call">
-                <Phone className="w-5 h-5" />
-              </button>
+              <button 
+  className="btn btn-ghost btn-sm btn-circle" 
+  title="Voice Call"
+  onClick={() => {
+    // Group calls coming in next phase
+    toast.info('Group calls coming soon!');
+  }}
+>
+  <Phone className="w-5 h-5" />
+</button>
+
 
               {/* Group Menu */}
               <div className="dropdown dropdown-end">
@@ -274,9 +283,13 @@ const ChatHeader = () => {
                               </button>
 
               {/* Voice Call Button */}
-              <button className="btn btn-ghost btn-sm btn-circle" title="Voice Call">
-                <Phone className="w-5 h-5" />
-              </button>
+              <button 
+  className="btn btn-ghost btn-sm btn-circle" 
+  title="Voice Call"
+  onClick={() => initiateCall(selectedUser._id, selectedUser)}
+>
+  <Phone className="w-5 h-5" />
+</button>
 
               {/* 🔥 NEW: Friend Menu */}
               <div className="dropdown dropdown-end">
