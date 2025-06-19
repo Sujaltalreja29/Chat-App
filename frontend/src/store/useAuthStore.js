@@ -89,7 +89,7 @@ connectSocket: () => {
   const { authUser } = get();
   if (!authUser || get().socket?.connected) return;
 
-  const socketURL = import.meta.env.MODE === "development" ? "https://chat-app-g6hy.onrender.com/api" : "https://chat-app-g6hy.onrender.com/api";
+  const socketURL = import.meta.env.MODE === "development" ? "https://chat-app-g6hy.onrender.com" : "https://chat-app-g6hy.onrender.com";
   
   const socket = io(socketURL, {
     query: {
