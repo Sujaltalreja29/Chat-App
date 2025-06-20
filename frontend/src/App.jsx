@@ -106,7 +106,7 @@ const App = () => {
         <Navbar />
       </div>
 
-      {/* 🔥 FIXED: Main content with conditional padding */}
+
       <div className={getMainPadding()}>
         <Routes>
           <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
