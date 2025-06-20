@@ -1,13 +1,12 @@
-// src/components/Navbar.jsx - Fixed mobile navbar
+// src/components/Navbar.jsx - Enhanced with Avatar Dropdown
 import { Link, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useFriendStore } from "../store/useFriendStore";
 import { useResponsive } from "../hooks/useResponsive";
 import { 
-  LogOut, MessageSquare, Settings, User, Bell, Search, 
-  Users, Hash, Menu, X, ArrowLeft 
+  LogOut, MessageSquare, Settings, User, Users, Hash, Menu, X, ChevronDown
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 const Navbar = () => {
   const { logout, authUser } = useAuthStore();
@@ -16,7 +15,8 @@ const Navbar = () => {
   const location = useLocation();
   
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
+  const dropdownRef = useRef(null);
   
   const totalRequests = pendingRequests.received?.length || 0;
   const isHomePage = location.pathname === '/';
@@ -30,14 +30,27 @@ const Navbar = () => {
   // Close mobile menu when route changes
   useEffect(() => {
     setShowMobileMenu(false);
-    setShowMobileSearch(false);
+    setShowAvatarDropdown(false);
   }, [location.pathname]);
 
-  // Don't hide navbar completely on mobile home page - show it but make it minimal
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowAvatarDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const shouldShowMinimalNavbar = showMobileLayout && isHomePage;
 
   return (
-    <header className="bg-base-100 border-b border-base-300 fixed w-full top-0 z-navbar backdrop-blur-lg">
+    <header className="bg-base-100 border-b border-base-300 fixed w-full top-0 z-navbar backdrop-blur-lg py-2">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`flex items-center justify-between ${
           shouldShowMinimalNavbar ? 'h-12' : 'h-16'
@@ -62,82 +75,138 @@ const Navbar = () => {
             )}
           </Link>
 
-          {/* Desktop Search Bar */}
-          {authUser && !showMobileLayout && (
-            <div className="flex-1 max-w-lg mx-8">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/60 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search conversations..."
-                  className="input input-bordered w-full pl-10 pr-4"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Desktop Actions */}
+          {/* Desktop Navigation & Actions */}
           {!showMobileLayout && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-6">
               {authUser ? (
                 <>
-                  <Link 
-                    to="/groups" 
-                    className={`btn btn-ghost ${
-                      location.pathname === '/groups' ? 'btn-active' : ''
-                    }`}
-                  >
-                    <Hash className="w-4 h-4" />
-                    <span className="hidden lg:inline">Groups</span>
-                  </Link>
-                  
-                  <Link 
-                    to="/friends" 
-                    className={`btn btn-ghost relative ${
-                      location.pathname === '/friends' ? 'btn-active' : ''
-                    }`}
-                  >
-                    <Users className="w-5 h-5" />
-                    <span className="hidden lg:inline">Friends</span>
-                    {totalRequests > 0 && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-error text-error-content rounded-full text-xs flex items-center justify-center font-bold">
-                        {totalRequests}
+                  {/* Navigation Links */}
+                  <nav className="flex items-center gap-1">
+                    <Link 
+                      to="/groups" 
+                      className={`btn btn-ghost ${
+                        location.pathname === '/groups' ? 'btn-active' : ''
+                      }`}
+                    >
+                      <Hash className="w-4 h-4" />
+                      <span className="hidden lg:inline ml-2">Groups</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/friends" 
+                      className={`btn btn-ghost relative ${
+                        location.pathname === '/friends' ? 'btn-active' : ''
+                      }`}
+                    >
+                      <Users className="w-5 h-5" />
+                      <span className="hidden lg:inline ml-2">Friends</span>
+                      {totalRequests > 0 && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-error text-error-content rounded-full text-xs flex items-center justify-center font-bold">
+                          {totalRequests}
+                        </div>
+                      )}
+                    </Link>
+
+                    <Link 
+                      to="/settings" 
+                      className={`btn btn-ghost ${
+                        location.pathname === '/settings' ? 'btn-active' : ''
+                      }`}
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span className="hidden lg:inline ml-2">Settings</span>
+                    </Link>
+                  </nav>
+
+                  {/* Avatar Dropdown */}
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      onClick={() => setShowAvatarDropdown(!showAvatarDropdown)}
+                      className="flex items-center gap-2 btn btn-ghost hover:bg-base-200 transition-colors"
+                    >
+                      <div className="avatar">
+                        <div className="w-8 h-8 rounded-full ring ring-base-300 ring-offset-2 ring-offset-base-100">
+                          {authUser.profilePic ? (
+                            <img 
+                              src={authUser.profilePic} 
+                              alt={authUser.fullName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-primary text-primary-content flex items-center justify-center text-sm font-medium">
+                              {authUser.fullName?.charAt(0).toUpperCase() || 'U'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <span className="hidden xl:inline font-medium text-base-content">
+                        {authUser.fullName?.split(' ')[0] || 'User'}
+                      </span>
+                      <ChevronDown className={`w-4 h-4 transition-transform ${
+                        showAvatarDropdown ? 'rotate-180' : ''
+                      }`} />
+                    </button>
+
+                    {/* Desktop Avatar Dropdown */}
+                    {showAvatarDropdown && (
+                      <div className="absolute right-0 top-full mt-2 w-64 bg-base-100 rounded-lg shadow-lg border border-base-300 py-2 z-dropdown animate-fade-in-up">
+                        {/* User Info */}
+                        <div className="px-4 py-3 border-b border-base-200">
+                          <div className="flex items-center gap-3">
+                            <div className="avatar">
+                              <div className="w-10 h-10 rounded-full ring ring-base-300 ring-offset-1 ring-offset-base-100">
+                                {authUser.profilePic ? (
+                                  <img 
+                                    src={authUser.profilePic} 
+                                    alt={authUser.fullName}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-primary text-primary-content flex items-center justify-center text-sm font-medium">
+                                    {authUser.fullName?.charAt(0).toUpperCase() || 'U'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-base-content truncate">
+                                {authUser.fullName}
+                              </div>
+                              <div className="text-sm text-base-content/70 truncate">
+                                {authUser.email}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Menu Items */}
+                        <div className="py-2">
+                          <Link
+                            to="/profile"
+                            onClick={() => setShowAvatarDropdown(false)}
+                            className={`flex items-center gap-3 px-4 py-2 hover:bg-base-200 transition-colors ${
+                              location.pathname === '/profile' ? 'bg-primary/10 text-primary' : 'text-base-content'
+                            }`}
+                          >
+                            <User className="w-4 h-4" />
+                            <span className="font-medium">Profile</span>
+                          </Link>
+
+                          <div className="divider my-2 mx-4"></div>
+
+                          <button
+                            onClick={() => {
+                              logout();
+                              setShowAvatarDropdown(false);
+                            }}
+                            className="flex items-center gap-3 px-4 py-2 hover:bg-error/10 text-error transition-colors w-full"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span className="font-medium">Sign out</span>
+                          </button>
+                        </div>
                       </div>
                     )}
-                  </Link>
-
-                  <Link 
-                    to="/settings" 
-                    className={`btn btn-ghost ${
-                      location.pathname === '/settings' ? 'btn-active' : ''
-                    }`}
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span className="hidden lg:inline">Settings</span>
-                  </Link>
-
-                  <Link 
-                    to="/profile" 
-                    className={`btn btn-ghost ${
-                      location.pathname === '/profile' ? 'btn-active' : ''
-                    }`}
-                  >
-                    <User className="w-4 h-4" />
-                    <span className="hidden lg:inline">Profile</span>
-                  </Link>
-
-                  <div className="flex items-center gap-3 ml-2">
-                    <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm font-medium shadow-sm">
-                      {authUser.fullName?.charAt(0).toUpperCase() || 'U'}
-                    </div>
-
-                    <button
-                      onClick={logout}
-                      className="btn btn-ghost text-error hover:bg-error/10"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span className="hidden xl:inline">Logout</span>
-                    </button>
                   </div>
                 </>
               ) : (
@@ -151,15 +220,24 @@ const Navbar = () => {
 
           {/* Mobile Actions */}
           {showMobileLayout && authUser && (
-            <div className="flex items-center gap-1">
-              {/* Mobile Search Toggle - Hide on minimal navbar */}
+            <div className="flex items-center gap-2">
+              {/* Mobile Avatar (Quick Access) */}
               {!shouldShowMinimalNavbar && (
-                <button
-                  onClick={() => setShowMobileSearch(!showMobileSearch)}
-                  className={`btn btn-ghost btn-circle btn-sm ${showMobileSearch ? 'btn-active' : ''}`}
-                >
-                  {showMobileSearch ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
-                </button>
+                <div className="avatar">
+                  <div className="w-8 h-8 rounded-full ring ring-base-300 ring-offset-1 ring-offset-base-100">
+                    {authUser.profilePic ? (
+                      <img 
+                        src={authUser.profilePic} 
+                        alt={authUser.fullName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-primary text-primary-content flex items-center justify-center text-xs font-medium">
+                        {authUser.fullName?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {/* Mobile Menu Toggle */}
@@ -184,47 +262,45 @@ const Navbar = () => {
             </div>
           )}
         </div>
-
-        {/* Mobile Search Bar */}
-        {showMobileLayout && authUser && showMobileSearch && !shouldShowMinimalNavbar && (
-          <div className="pb-3 border-t border-base-300 mt-3 pt-3 animate-slide-in-left">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content/60 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search conversations..."
-                className="input input-bordered input-sm w-full pl-10 pr-4 input-mobile"
-                autoFocus
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Mobile Menu Dropdown */}
       {showMobileLayout && authUser && showMobileMenu && (
-        <div className="absolute top-full left-0 right-0 bg-base-100 border-b border-base-300 shadow-lg animate-slide-in-left z-dropdown">
+        <div className="absolute top-full left-0 right-0 bg-base-100 border-b border-base-300 shadow-lg animate-slide-in-top z-dropdown">
           <div className="max-w-7xl mx-auto px-4 py-4">
             {/* User Info */}
             <div className="flex items-center gap-3 mb-4 p-3 bg-base-200 rounded-lg">
-              <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center text-sm font-medium shadow-sm">
-                {authUser.fullName?.charAt(0).toUpperCase() || 'U'}
+              <div className="avatar">
+                <div className="w-12 h-12 rounded-full ring ring-base-300 ring-offset-2 ring-offset-base-200">
+                  {authUser.profilePic ? (
+                    <img 
+                      src={authUser.profilePic} 
+                      alt={authUser.fullName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-primary text-primary-content flex items-center justify-center text-sm font-medium">
+                      {authUser.fullName?.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-base-content truncate">
                   {authUser.fullName}
                 </div>
-                <div className="text-sm text-base-content/60 truncate">
+                <div className="text-sm text-base-content/70 truncate">
                   {authUser.email}
                 </div>
               </div>
             </div>
 
             {/* Navigation Links */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Link
                 to="/groups"
-                className={`flex items-center gap-3 p-3 rounded-lg transition-colors relative ${
+                onClick={() => setShowMobileMenu(false)}
+                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
                   location.pathname === '/groups' 
                     ? 'bg-primary text-primary-content' 
                     : 'hover:bg-base-200'
@@ -236,6 +312,7 @@ const Navbar = () => {
 
               <Link
                 to="/friends"
+                onClick={() => setShowMobileMenu(false)}
                 className={`flex items-center gap-3 p-3 rounded-lg transition-colors relative ${
                   location.pathname === '/friends' 
                     ? 'bg-primary text-primary-content' 
@@ -253,6 +330,7 @@ const Navbar = () => {
 
               <Link
                 to="/settings"
+                onClick={() => setShowMobileMenu(false)}
                 className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
                   location.pathname === '/settings' 
                     ? 'bg-primary text-primary-content' 
@@ -265,6 +343,7 @@ const Navbar = () => {
 
               <Link
                 to="/profile"
+                onClick={() => setShowMobileMenu(false)}
                 className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
                   location.pathname === '/profile' 
                     ? 'bg-primary text-primary-content' 
@@ -275,13 +354,19 @@ const Navbar = () => {
                 <span className="font-medium">Profile</span>
               </Link>
 
+              {/* Divider */}
+              <div className="divider my-2"></div>
+
               {/* Logout */}
               <button
-                onClick={logout}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-error/10 text-error transition-colors w-full"
+                onClick={() => {
+                  logout();
+                  setShowMobileMenu(false);
+                }}
+                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-error/10 text-error transition-colors w-full"
               >
                 <LogOut className="w-5 h-5" />
-                <span className="font-medium">Logout</span>
+                <span className="font-medium">Sign out</span>
               </button>
             </div>
           </div>
@@ -289,12 +374,12 @@ const Navbar = () => {
       )}
 
       {/* Mobile Menu Overlay */}
-      {showMobileLayout && (showMobileMenu || showMobileSearch) && (
+      {showMobileLayout && (showMobileMenu || showAvatarDropdown) && (
         <div
           className="fixed inset-0 bg-black/20 z-overlay top-16"
           onClick={() => {
             setShowMobileMenu(false);
-            setShowMobileSearch(false);
+            setShowAvatarDropdown(false);
           }}
         />
       )}

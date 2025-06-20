@@ -20,47 +20,50 @@ export const useGroupStore = create((set, get) => ({
   isSearching: false,
   
   // Create new group
-  createGroup: async (groupData) => {
-    set({ isCreatingGroup: true });
-    try {
-      const formData = new FormData();
-      formData.append("name", groupData.name);
-      formData.append("description", groupData.description || "");
-      formData.append("memberIds", JSON.stringify(groupData.memberIds || []));
-      formData.append("isPrivate", groupData.isPrivate || false);
-      formData.append("allowMemberInvite", groupData.allowMemberInvite !== false);
-      
-      if (groupData.groupPic) {
-        formData.append("groupPic", groupData.groupPic);
-      }
-
-      const res = await axiosInstance.post("/groups/create", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      toast.success("Group created successfully!");
-      get().getMyGroups(); // Refresh groups
-      return res.data;
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to create group");
-      throw error;
-    } finally {
-      set({ isCreatingGroup: false });
+createGroup: async (groupData) => {
+  set({ isCreatingGroup: true });
+  try {
+    const formData = new FormData();
+    formData.append("name", groupData.name);
+    formData.append("description", groupData.description || "");
+    formData.append("memberIds", JSON.stringify(groupData.memberIds || []));
+    formData.append("isPrivate", groupData.isPrivate || false);
+    formData.append("allowMemberInvite", groupData.allowMemberInvite !== false);
+    
+    if (groupData.groupPic) {
+      formData.append("groupPic", groupData.groupPic);
     }
-  },
+
+    const res = await axiosInstance.post("/groups/create", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    toast.success("Group created successfully!");
+    get().getMyGroups();
+    return res.data;
+  } catch (error) {
+    // 🔧 FIX: Enhanced error handling
+    toast.error(error.response?.data?.error || error.response?.data?.message || "Failed to create group");
+    throw error;
+  } finally {
+    set({ isCreatingGroup: false });
+  }
+},
 
   // Get user's groups
-  getMyGroups: async () => {
-    set({ isGroupsLoading: true });
-    try {
-      const res = await axiosInstance.get("/groups/my-groups");
-      set({ groups: res.data });
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to fetch groups");
-    } finally {
-      set({ isGroupsLoading: false });
-    }
-  },
+getMyGroups: async () => {
+  set({ isGroupsLoading: true });
+  try {
+    const res = await axiosInstance.get("/groups/my-groups");
+    set({ groups: res.data });
+  } catch (error) {
+    // 🔧 FIX: Enhanced error handling
+    toast.error(error.response?.data?.error || error.response?.data?.message || "Failed to fetch groups");
+    set({ groups: [] }); // Reset on error
+  } finally {
+    set({ isGroupsLoading: false });
+  }
+},
 
   // Get group details
   getGroupDetails: async (groupId) => {
@@ -196,23 +199,24 @@ export const useGroupStore = create((set, get) => ({
   },
 
   // Search public groups
-  searchGroups: async (query) => {
-    if (!query.trim()) {
-      set({ searchResults: [] });
-      return;
-    }
+searchGroups: async (query) => {
+  if (!query?.trim()) {
+    set({ searchResults: [] });
+    return;
+  }
 
-    set({ isSearching: true });
-    try {
-      const res = await axiosInstance.get(`/groups/search?query=${encodeURIComponent(query)}`);
-      set({ searchResults: res.data });
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to search groups");
-      set({ searchResults: [] });
-    } finally {
-      set({ isSearching: false });
-    }
-  },
+  set({ isSearching: true });
+  try {
+    const res = await axiosInstance.get(`/groups/search?query=${encodeURIComponent(query.trim())}`);
+    set({ searchResults: res.data });
+  } catch (error) {
+    // 🔧 FIX: Enhanced error handling
+    toast.error(error.response?.data?.error || error.response?.data?.message || "Failed to search groups");
+    set({ searchResults: [] });
+  } finally {
+    set({ isSearching: false });
+  }
+},
 
   // Join public group
   joinGroup: async (groupId) => {

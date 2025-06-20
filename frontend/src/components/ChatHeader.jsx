@@ -1,20 +1,23 @@
-// Update your existing ChatHeader.jsx to support friend profile
+// src/components/ChatHeader.jsx - COMPLETE CODE with remove friend functionality
 import { useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { useGroupStore } from "../store/useGroupStore";
-import { useSearchStore } from "../store/useSearchStore"; // ADD THIS
+import { useFriendStore } from "../store/useFriendStore"; // ADD THIS
+import { useSearchStore } from "../store/useSearchStore";
 import { 
   X, Phone, Video, MoreVertical, ArrowLeft, 
   Users, Crown, Settings, UserMinus, LogOut,
   Search, User, Info
 } from "lucide-react";
 import GroupInfo from "./GroupInfo";
-import FriendProfile from "./FriendProfile"; // ADD THIS IMPORT
+import FriendProfile from "./FriendProfile";
 
 const ChatHeader = () => {
   const [showGroupInfo, setShowGroupInfo] = useState(false);
-  const [showFriendProfile, setShowFriendProfile] = useState(false); // ADD THIS STATE
+  const [showFriendProfile, setShowFriendProfile] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false); // ADD THIS STATE
+  
   const { setSearchMode, showSearch } = useSearchStore();
   
   const { 
@@ -24,8 +27,21 @@ const ChatHeader = () => {
   
   const { onlineUsers, authUser } = useAuthStore();
   const { leaveGroup, deleteGroup } = useGroupStore();
+  const { removeFriend } = useFriendStore(); // ADD THIS
 
   const { toggleConversationSearch } = useSearchStore();
+
+  // 🔥 ADD THIS FUNCTION
+  const handleRemoveFriend = async () => {
+    try {
+      await removeFriend(selectedUser._id);
+      setShowRemoveConfirm(false);
+      clearChat(); // Close the chat after removing friend
+    } catch (error) {
+      // Error is handled in the store
+      console.error('Failed to remove friend:', error);
+    }
+  };
 
   const handleBack = () => {
     clearChat();
@@ -159,15 +175,15 @@ const ChatHeader = () => {
                       </button>
                     </li>
                   )}
-  <li>
-    <button 
-      onClick={handleConversationSearch}  // CHANGE THIS LINE
-      className="flex items-center gap-2"
-    >
-      <Search className="w-4 h-4" />
-      Search Messages
-    </button>
-  </li>
+                  <li>
+                    <button 
+                      onClick={handleConversationSearch}
+                      className="flex items-center gap-2"
+                    >
+                      <Search className="w-4 h-4" />
+                      Search Messages
+                    </button>
+                  </li>
                   <div className="divider my-1"></div>
                   <li>
                     <button 
@@ -214,7 +230,6 @@ const ChatHeader = () => {
   }
 
   if (chatType === 'direct' && selectedUser) {
-    // 🔥 ENHANCED: Direct Chat Header with Friend Profile
     const isOnline = onlineUsers.includes(selectedUser._id);
 
     return (
@@ -232,7 +247,7 @@ const ChatHeader = () => {
                 <ArrowLeft className="w-5 h-5" />
               </button>
 
-              {/* 🔥 NEW: User Avatar - MAKE IT CLICKABLE */}
+              {/* User Avatar - Clickable */}
               <button
                 onClick={() => setShowFriendProfile(true)}
                 className="relative hover:opacity-80 transition-opacity"
@@ -242,13 +257,12 @@ const ChatHeader = () => {
                   alt={selectedUser.fullName}
                   className="w-10 h-10 rounded-full object-cover border-2 border-base-300"
                 />
-                {/* Online Status Indicator */}
                 {isOnline && (
                   <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success border-2 border-base-100 rounded-full"></div>
                 )}
               </button>
 
-              {/* 🔥 NEW: User Details - MAKE IT CLICKABLE */}
+              {/* User Details - Clickable */}
               <button
                 onClick={() => setShowFriendProfile(true)}
                 className="min-w-0 flex-1 text-left hover:opacity-80 transition-opacity"
@@ -268,17 +282,7 @@ const ChatHeader = () => {
 
             {/* Right Section - Action Buttons */}
             <div className="flex items-center gap-1">
-              {/* Video Call Button */}
-              <button className="btn btn-ghost btn-sm btn-circle" title="Video Call">
-                <Video className="w-5 h-5"/>
-                              </button>
-
-              {/* Voice Call Button */}
-              <button className="btn btn-ghost btn-sm btn-circle" title="Voice Call">
-                <Phone className="w-5 h-5" />
-              </button>
-
-              {/* 🔥 NEW: Friend Menu */}
+              {/* Friend Menu */}
               <div className="dropdown dropdown-end">
                 <button className="btn btn-ghost btn-sm btn-circle">
                   <MoreVertical className="w-5 h-5" />
@@ -293,26 +297,22 @@ const ChatHeader = () => {
                       Friend Profile
                     </button>
                   </li>
-                  {/* REPLACE THIS EXISTING SEARCH BUTTON */}
-  <li>
-    <button 
-      onClick={handleConversationSearch}  // CHANGE THIS LINE
-      className="flex items-center gap-2"
-    >
-      <Search className="w-4 h-4" />
-      Search Messages
-    </button>
-  </li>
-
                   <li>
-                    <button className="flex items-center gap-2">
-                      <Info className="w-4 h-4" />
-                      Chat Info
+                    <button 
+                      onClick={handleConversationSearch}
+                      className="flex items-center gap-2"
+                    >
+                      <Search className="w-4 h-4" />
+                      Search Messages
                     </button>
                   </li>
                   <div className="divider my-1"></div>
+                  {/* 🔥 UPDATED: Working Remove Friend Button */}
                   <li>
-                    <button className="flex items-center gap-2 text-warning hover:bg-warning hover:text-warning-content">
+                    <button 
+                      onClick={() => setShowRemoveConfirm(true)}
+                      className="flex items-center gap-2 text-warning hover:bg-warning hover:text-warning-content"
+                    >
                       <UserMinus className="w-4 h-4" />
                       Remove Friend
                     </button>
@@ -331,12 +331,49 @@ const ChatHeader = () => {
           </div>
         </div>
 
-        {/* 🔥 NEW: Friend Profile Modal */}
+        {/* Friend Profile Modal */}
         <FriendProfile
           friend={selectedUser}
           isOpen={showFriendProfile}
           onClose={() => setShowFriendProfile(false)}
         />
+
+        {/* 🔥 NEW: Remove Friend Confirmation Modal */}
+        {showRemoveConfirm && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
+            <div className="bg-base-100 rounded-2xl shadow-xl w-full max-w-md p-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-error/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <UserMinus className="w-8 h-8 text-error" />
+                </div>
+                
+                <h3 className="text-lg font-bold text-base-content mb-2">
+                  Remove Friend
+                </h3>
+                
+                <p className="text-base-content/70 mb-6">
+                  Are you sure you want to remove <span className="font-semibold">{selectedUser.fullName}</span> from your friends list? 
+                  This action cannot be undone and will close this chat.
+                </p>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowRemoveConfirm(false)}
+                    className="btn btn-ghost flex-1"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleRemoveFriend}
+                    className="btn btn-error flex-1"
+                  >
+                    Remove Friend
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     );
   }

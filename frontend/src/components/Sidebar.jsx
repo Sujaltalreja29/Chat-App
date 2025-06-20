@@ -12,7 +12,8 @@ import DefaultGroupIcon from "./DefaultGroupIcon";
 import { formatLastMessage, formatMessageTime } from '../utils/messageFormatters';
 import { 
   Users, Search, Filter, MessageCircle, UserPlus, 
-  Plus, Hash, Crown, User, Camera, File, X, ArrowLeft, Clock
+  Plus, Hash, Crown, User, Camera, File, X, ArrowLeft, Clock,
+  MessageSquare
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -270,48 +271,108 @@ const highlightSearchTerm = (text, query) => {
         <div className={`border-b border-base-300 ${showMobileLayout ? 'p-3' : 'p-4'}`}>
           
           {/* Logo/Title Section */}
-          <div className="flex items-center gap-3 mb-4">
-            {showGlobalSearch && showMobileLayout ? (
-              // Mobile search header
-              <button
-                onClick={handleSearchToggle}
-                className="btn btn-ghost btn-sm btn-circle"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-            ) : (
-              <div className={`bg-primary text-primary-content rounded-lg flex items-center justify-center relative ${
-                showMobileLayout ? 'w-8 h-8' : 'w-10 h-10'
-              }`}>
-                <MessageCircle className={`${showMobileLayout ? 'w-4 h-4' : 'w-6 h-6'}`} />
-                {totalUnreadCount > 0 && (
-                  <div className={`absolute bg-error text-error-content font-bold rounded-full flex items-center justify-center ${
-                    showMobileLayout 
-                      ? '-top-1 -right-1 w-4 h-4 text-xs' 
-                      : '-top-2 -right-2 w-5 h-5 text-xs'
-                  }`}>
-                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Title - Hide in mobile search mode */}
-            {!isSmallMobile && !(showGlobalSearch && showMobileLayout) && (
-              <div>
-                <h2 className={`font-bold text-base-content ${
-                  showMobileLayout ? 'text-base' : 'text-lg'
-                }`}>
-                  {showGlobalSearch ? 'Search Messages' : 'Chatty'}
-                </h2>
-                <p className={`font-medium text-base-content/80 ${
-                  showMobileLayout ? 'text-xs' : 'text-sm'
-                }`}>
-                  {showGlobalSearch ? 'Find messages and chats' : 'Stay connected'}
-                </p>
-              </div>
-            )}
-          </div>
+            {/* Logo/Title Section - HIDE in mobile when no chat selected */}
+  {!showMobileLayout && (
+    <div className="flex items-center gap-3 mb-4">
+      {showGlobalSearch && showMobileLayout ? (
+        // Mobile search header
+        <button
+          onClick={handleSearchToggle}
+          className="btn btn-ghost btn-sm btn-circle"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+      ) : (
+        <div className={`bg-primary text-primary-content rounded-lg flex items-center justify-center relative ${
+          showMobileLayout ? 'w-8 h-8' : 'w-10 h-10'
+        }`}>
+          <MessageSquare className={`${showMobileLayout ? 'w-4 h-4' : 'w-6 h-6'}`} />
+          {totalUnreadCount > 0 && (
+            <div className={`absolute bg-error text-error-content font-bold rounded-full flex items-center justify-center ${
+              showMobileLayout 
+                ? '-top-1 -right-1 w-4 h-4 text-xs' 
+                : '-top-2 -right-2 w-5 h-5 text-xs'
+            }`}>
+              {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Title - Hide in mobile search mode */}
+      {!(showGlobalSearch && showMobileLayout) && (
+        <div>
+          <h2 className={`font-bold text-base-content ${
+            showMobileLayout ? 'text-base' : 'text-lg'
+          }`}>
+            {showGlobalSearch ? 'Search Messages' : 'Chatty'}
+          </h2>
+          <p className={`font-medium text-base-content/80 ${
+            showMobileLayout ? 'text-xs' : 'text-sm'
+          }`}>
+            {showGlobalSearch ? 'Find messages and chats' : 'Stay connected'}
+          </p>
+        </div>
+      )}
+    </div>
+  )}
+
+{/* 🔥 WhatsApp-style Mobile header */}
+{showMobileLayout && !showGlobalSearch && (
+  <div className="mb-4">
+    {/* Header with Avatar and Title */}
+    <div className="flex items-center justify-between mb-4">
+      {/* User Profile */}
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <img
+            src={authUser?.profilePic || "/avatar.png"}
+            alt={authUser?.fullName}
+            className="w-10 h-10 rounded-full object-cover border-2 border-primary/20"
+          />
+          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-success border-2 border-base-100 rounded-full"></div>
+        </div>
+        <div>
+          <h1 className="font-bold text-base-content text-xl">Chatty</h1>
+          <p className="text-xs text-base-content/70">
+            Welcome back, {authUser?.fullName?.split(' ')[0]}
+          </p>
+        </div>
+      </div>
+
+      {/* Notification Badge */}
+      {totalUnreadCount > 0 && (
+        <div className="bg-error text-white text-sm font-bold px-3 py-1 rounded-full shadow-lg">
+          {totalUnreadCount > 99 ? '99+' : totalUnreadCount} new
+        </div>
+      )}
+    </div>
+
+    {/* Connection Status */}
+    <div className="flex items-center justify-center gap-2 py-2 bg-success/10 rounded-lg mb-2">
+      <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+      <span className="text-xs text-success font-medium">
+        Connected • {onlineUsers.length - 1} friends online
+      </span>
+    </div>
+  </div>
+)}
+
+  {/* Search header for mobile global search */}
+  {showMobileLayout && showGlobalSearch && (
+    <div className="flex items-center gap-3 mb-4">
+      <button
+        onClick={handleSearchToggle}
+        className="btn btn-ghost btn-sm btn-circle"
+      >
+        <ArrowLeft className="w-4 h-4" />
+      </button>
+      <div>
+        <h2 className="font-bold text-base-content text-base">Search Messages</h2>
+        <p className="font-medium text-base-content/80 text-xs">Find messages and chats</p>
+      </div>
+    </div>
+  )}
 
           {/* Tabs - Hide in search mode */}
           {!showGlobalSearch && (
@@ -879,16 +940,19 @@ const highlightSearchTerm = (text, query) => {
                           <div className="relative flex-shrink-0">
                             {group.groupPic ? (
                               <img
-                                src={group.groupPic}
+                                src={"avatar.png"}
                                 alt={group.name}
                                 className={`rounded-full object-cover border-2 border-base-300 ${
                                   showMobileLayout ? 'w-12 h-12' : 'w-12 h-12'
                                 }`}
                               />
                             ) : (
-                              <DefaultGroupIcon 
-                                className={showMobileLayout ? "w-12 h-12" : "w-12 h-12"} 
-                                iconClassName={showMobileLayout ? "w-5 h-5" : "w-5 h-5"} 
+                              <img
+                                src={"avatar.png"}
+                                alt={group.name}
+                                className={`rounded-full object-cover border-2 border-base-300 ${
+                                  showMobileLayout ? 'w-12 h-12' : 'w-12 h-12'
+                                }`}
                               />
                             )}
                             

@@ -1,9 +1,10 @@
+// store/useAuthStore.js - Only critical fixes
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5001/api" : "http://localhost:5001/api";
+const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5001" : "http://localhost:5001";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -17,14 +18,13 @@ export const useAuthStore = create((set, get) => ({
   checkAuth: async () => {
     try {
       const res = await axiosInstance.get("/auth/check");
-      console.log("checkAuth response:", res.data);
       set({ authUser: res.data });
       get().connectSocket();
     } catch (error) {
-        if (err.response?.status !== 401) {
-    console.error("Error in checkAuth:", err);
-  }
-
+      // 🔧 FIX: Fixed variable name (was 'err')
+      if (error.response?.status !== 401) {
+        console.error("Error in checkAuth:", error);
+      }
       set({ authUser: null });
     } finally {
       set({ isCheckingAuth: false });
@@ -39,7 +39,8 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Account created successfully");
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      // 🔧 FIX: Added null check
+      toast.error(error.response?.data?.message || "Signup failed");
     } finally {
       set({ isSigningUp: false });
     }
@@ -51,10 +52,10 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.post("/auth/login", data);
       set({ authUser: res.data });
       toast.success("Logged in successfully");
-
       get().connectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      // 🔧 FIX: Added null check
+      toast.error(error.response?.data?.message || "Login failed");
     } finally {
       set({ isLoggingIn: false });
     }
@@ -67,7 +68,9 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Logged out successfully");
       get().disconnectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      // 🔧 FIX: Added null check and still disconnect on error
+      toast.error(error.response?.data?.message || "Logout failed");
+      get().disconnectSocket();
     }
   },
 
@@ -79,59 +82,58 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Profile updated successfully");
     } catch (error) {
       console.log("error in update profile:", error);
-      toast.error(error.response.data.message);
+      // 🔧 FIX: Added null check
+      toast.error(error.response?.data?.message || "Update failed");
     } finally {
       set({ isUpdatingProfile: false });
     }
   },
 
-connectSocket: () => {
-  const { authUser } = get();
-  if (!authUser || get().socket?.connected) return;
+  connectSocket: () => {
+    const { authUser } = get();
+    if (!authUser || get().socket?.connected) return;
 
-  // 🔧 FIXED: Use correct base URL without /api
-  const socketURL = import.meta.env.MODE === "development" ? "http://localhost:5001" : "http://localhost:5001";
-  
-  const socket = io(socketURL, {
-    query: {
-      userId: authUser._id,
-    },
-    // 🔧 Add connection options for better reliability
-    transports: ['websocket', 'polling'],
-    upgrade: true,
-    rememberUpgrade: true,
-  });
+    const socketURL = import.meta.env.MODE === "development" ? "http://localhost:5001" : "http://localhost:5001";
+    
+    const socket = io(socketURL, {
+      query: {
+        userId: authUser._id,
+      },
+      transports: ['websocket', 'polling'],
+      upgrade: true,
+      rememberUpgrade: true,
+    });
 
-  set({ socket: socket });
+    set({ socket: socket });
 
-  // 🔧 Add connection event handlers
-  socket.on("connect", () => {
-    console.log("🔌 Socket connected successfully:", socket.id);
-  });
+    socket.on("connect", () => {
+      console.log("🔌 Socket connected successfully:", socket.id);
+    });
 
-  socket.on("disconnect", (reason) => {
-    console.log("🔌 Socket disconnected:", reason);
-  });
+    socket.on("disconnect", (reason) => {
+      console.log("🔌 Socket disconnected:", reason);
+    });
 
-  socket.on("connect_error", (error) => {
-    console.error("🔌 Socket connection error:", error);
-  });
+    socket.on("connect_error", (error) => {
+      console.error("🔌 Socket connection error:", error);
+    });
 
-  socket.on("getOnlineUsers", (userIds) => {
-    set({ onlineUsers: userIds });
-  });
+    socket.on("getOnlineUsers", (userIds) => {
+      set({ onlineUsers: userIds });
+    });
+  },
 
-  // Add friend request notifications
-  socket.on("friendRequestReceived", (data) => {
-    // Handle in useFriendStore
-  });
-
-  socket.on("friendRequestAccepted", (data) => {
-    // Handle in useFriendStore
-  });
-},
   disconnectSocket: () => {
-    if (get().socket?.connected) get().socket.disconnect();
-    set({ socket: null }); // 🔥 Clear socket from state
+    // 🔧 FIX: Added null checks and error handling
+    const socket = get().socket;
+    if (socket) {
+      try {
+        if (socket.connected) socket.disconnect();
+        socket.removeAllListeners();
+      } catch (error) {
+        console.error('Socket disconnect error:', error);
+      }
+    }
+    set({ socket: null, onlineUsers: [] });
   },
 }));

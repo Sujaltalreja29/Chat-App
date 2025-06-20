@@ -2,15 +2,23 @@
 import Message from "../models/message.model.js";
 import User from "../models/user.model.js";
 import Group from "../models/group.model.js";
-import { getReceiverSocketId, io } from "../lib/socket.js";
+import mongoose from "mongoose";
+
+// Helper function to validate ObjectId
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
+
+// Helper function to sanitize search query
+const sanitizeSearchQuery = (query) => {
+  return query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
 
 // 🔍 Search messages across all conversations
 export const searchGlobalMessages = async (req, res) => {
   try {
     const { q: query, type = 'all', limit = 20, page = 1 } = req.query;
     const userId = req.user._id;
-
-    console.log(`🔍 Global search request: query="${query}", user=${userId}, type=${type}`);
 
     if (!query || query.trim().length === 0) {
       return res.status(400).json({ error: "Search query is required" });
@@ -20,18 +28,15 @@ export const searchGlobalMessages = async (req, res) => {
       return res.status(400).json({ error: "Search query must be at least 2 characters" });
     }
 
-    // Create case-insensitive regex for partial matching
-    const searchRegex = new RegExp(query.trim(), 'i');
-    
-    console.log(`🔍 Search regex: ${searchRegex}`);
+    // Sanitize search query
+    const sanitizedQuery = sanitizeSearchQuery(query);
+    const searchRegex = new RegExp(sanitizedQuery, 'i');
 
     // Get user's groups first
     const userGroups = await Group.find({
       'members.user': userId
     }).select('_id');
     const userGroupIds = userGroups.map(g => g._id);
-    
-    console.log(`👥 User groups: ${userGroupIds.length} groups`);
 
     // Build the search query
     const searchConditions = {
@@ -71,43 +76,36 @@ export const searchGlobalMessages = async (req, res) => {
       searchConditions.$and.push({ messageSubType: type });
     }
 
-    console.log(`🔍 Search conditions:`, JSON.stringify(searchConditions, null, 2));
-
-    // Execute the search
+    // Execute the search with pagination
     const messages = await Message.find(searchConditions)
       .populate('senderId', 'fullName profilePic')
       .populate('receiverId', 'fullName profilePic')
       .populate('groupId', 'name groupPic')
       .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
+      .skip((parseInt(page) - 1) * parseInt(limit))
       .limit(parseInt(limit))
       .lean();
 
-    console.log(`🔍 Found ${messages.length} messages`);
-
     // Get total count
     const totalResults = await Message.countDocuments(searchConditions);
-    
-    console.log(`🔍 Total results: ${totalResults}`);
 
     res.status(200).json({
       messages,
       pagination: {
         currentPage: parseInt(page),
-        totalPages: Math.ceil(totalResults / limit),
+        totalPages: Math.ceil(totalResults / parseInt(limit)),
         totalResults,
-        hasMore: totalResults > page * limit,
+        hasMore: totalResults > parseInt(page) * parseInt(limit),
         limit: parseInt(limit)
       },
       query: query.trim()
     });
 
   } catch (error) {
-    console.error("❌ Error in searchGlobalMessages:", error);
-    res.status(500).json({ error: "Search failed", details: error.message });
+    console.error("Error in searchGlobalMessages:", error);
+    res.status(500).json({ error: "Search failed. Please try again." });
   }
 };
-
 
 // 🔍 Search within specific conversation
 export const searchInConversation = async (req, res) => {
@@ -120,47 +118,44 @@ export const searchInConversation = async (req, res) => {
       return res.status(400).json({ error: "Search query is required" });
     }
 
-    console.log(`🔍 Search in ${chatType} chat ${chatId}: "${query}"`);
+    if (!isValidObjectId(chatId)) {
+      return res.status(400).json({ error: "Invalid chat ID" });
+    }
 
-    // 🔧 FIX: Use regex for partial matching
-    const searchRegex = new RegExp(query.trim(), 'i');
+    if (!['direct', 'group'].includes(chatType)) {
+      return res.status(400).json({ error: "Invalid chat type" });
+    }
+
+    // Sanitize search query
+    const sanitizedQuery = sanitizeSearchQuery(query);
+    const searchRegex = new RegExp(sanitizedQuery, 'i');
     
     const searchConditions = {
-      $or: [
-        { text: { $regex: searchRegex } },
-        { "file.originalName": { $regex: searchRegex } }
+      $and: [
+        {
+          $or: [
+            { text: { $regex: searchRegex } },
+            { "file.originalName": { $regex: searchRegex } }
+          ]
+        }
       ],
       deletedAt: { $exists: false }
     };
 
     // Add message type filter
-    if (type !== 'all') {
+    if (type !== 'all' && ['text', 'image', 'document', 'audio', 'video', 'voice'].includes(type)) {
       searchConditions.messageSubType = type;
     }
 
     // Add chat-specific conditions
     if (chatType === 'direct') {
       searchConditions.messageType = 'direct';
-      searchConditions.$or.push(
-        { senderId: userId, receiverId: chatId },
-        { senderId: chatId, receiverId: userId }
-      );
-      // Reset $or to include both search and chat conditions
-      searchConditions.$and = [
-        {
-          $or: [
-            { text: { $regex: searchRegex } },
-            { "file.originalName": { $regex: searchRegex } }
-          ]
-        },
-        {
-          $or: [
-            { senderId: userId, receiverId: chatId },
-            { senderId: chatId, receiverId: userId }
-          ]
-        }
-      ];
-      delete searchConditions.$or;
+      searchConditions.$and.push({
+        $or: [
+          { senderId: userId, receiverId: chatId },
+          { senderId: chatId, receiverId: userId }
+        ]
+      });
     } else if (chatType === 'group') {
       // Verify user is group member
       const group = await Group.findById(chatId);
@@ -188,8 +183,6 @@ export const searchInConversation = async (req, res) => {
       .limit(parseInt(limit))
       .lean();
 
-    console.log(`🔍 Found ${messages.length} messages in ${chatType} chat`);
-
     res.status(200).json({
       messages,
       chatId,
@@ -200,16 +193,14 @@ export const searchInConversation = async (req, res) => {
 
   } catch (error) {
     console.error("Error in searchInConversation:", error);
-    res.status(500).json({ error: "Search failed" });
+    res.status(500).json({ error: "Search failed. Please try again." });
   }
 };
 
 // 🔍 Get recent searches for user
 export const getRecentSearches = async (req, res) => {
   try {
-    const userId = req.user._id;
-    
-    // For now, return empty array - we'll implement search history later
+    // For now, return suggestions - can implement search history later
     res.status(200).json({
       recentSearches: [],
       suggestions: [
@@ -236,10 +227,19 @@ export const searchChats = async (req, res) => {
       return res.status(400).json({ error: "Search query is required" });
     }
 
-    console.log(`🔍 Search chats: "${query}"`);
+    if (query.trim().length < 2) {
+      return res.status(400).json({ error: "Search query must be at least 2 characters" });
+    }
+
+    // Sanitize search query
+    const sanitizedQuery = sanitizeSearchQuery(query);
 
     // Search friends
     const user = await User.findById(userId).populate('friends', 'fullName profilePic');
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
     const matchingFriends = user.friends.filter(friend =>
       friend.fullName.toLowerCase().includes(query.toLowerCase())
     );
@@ -247,7 +247,7 @@ export const searchChats = async (req, res) => {
     // Search groups user is member of
     const matchingGroups = await Group.find({
       'members.user': userId,
-      name: { $regex: query, $options: 'i' }
+      name: { $regex: sanitizedQuery, $options: 'i' }
     }).select('name groupPic members').lean();
 
     res.status(200).json({

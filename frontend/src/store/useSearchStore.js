@@ -1,36 +1,29 @@
-// store/useSearchStore.js - UPDATE THE EXISTING STORE
+// store/useSearchStore.js - Only critical fixes
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 
 export const useSearchStore = create((set, get) => ({
-  // Search state
   searchQuery: "",
   globalSearchResults: [],
   conversationSearchResults: [],
   searchType: "all",
   isSearching: false,
-  searchMode: "none", // none, global, conversation
+  searchMode: "none",
   currentChatId: null,
-  currentChatType: "direct",
-  
-  // UI state - SIMPLIFIED
+    currentChatType: "direct",
   showGlobalSearch: false,
   showConversationSearch: false,
   searchHistory: [],
   searchSuggestions: [],
-  
-  // Results pagination
   currentPage: 1,
   totalResults: 0,
   hasMoreResults: false,
   
-  // UPDATED Actions
   setSearchQuery: (query) => set({ searchQuery: query }),
   
   setSearchType: (type) => set({ searchType: type, currentPage: 1 }),
   
-  // NEW: Toggle global search in sidebar
   toggleGlobalSearch: () => {
     const { showGlobalSearch } = get();
     set({ 
@@ -42,7 +35,6 @@ export const useSearchStore = create((set, get) => ({
     });
   },
   
-  // NEW: Toggle conversation search in chat
   toggleConversationSearch: (chatId = null, chatType = "direct") => {
     const { showConversationSearch } = get();
     set({ 
@@ -56,53 +48,48 @@ export const useSearchStore = create((set, get) => ({
     });
   },
   
-  // UPDATED: Global search for sidebar
-searchGlobal: async (query, type = "all", page = 1) => {
-  if (!query || query.trim().length < 2) {
-    set({ globalSearchResults: [], totalResults: 0, hasMoreResults: false });
-    return;
-  }
-  
-  console.log(`🔍 Frontend: Searching for "${query}" (type: ${type}, page: ${page})`);
-  set({ isSearching: true });
-  
-  try {
-    const response = await axiosInstance.get("/search/messages", {
-      params: { q: query.trim(), type, page, limit: 20 }
-    });
-    
-    console.log(`✅ Frontend: Search response:`, response.data);
-    
-    const { messages, pagination } = response.data;
-    
-    if (page === 1) {
-      set({
-        globalSearchResults: messages,
-        currentPage: page,
-        totalResults: pagination.totalResults,
-        hasMoreResults: pagination.hasMore
-      });
-    } else {
-      set({
-        globalSearchResults: [...get().globalSearchResults, ...messages],
-        currentPage: page,
-        hasMoreResults: pagination.hasMore
-      });
+  searchGlobal: async (query, type = "all", page = 1) => {
+    if (!query || query.trim().length < 2) {
+      set({ globalSearchResults: [], totalResults: 0, hasMoreResults: false });
+      return;
     }
     
-    get().addToSearchHistory(query);
+    set({ isSearching: true });
     
-  } catch (error) {
-    console.error("❌ Frontend: Global search failed:", error);
-    console.error("❌ Error response:", error.response?.data);
-    toast.error("Search failed. Please try again.");
-    set({ globalSearchResults: [], totalResults: 0, hasMoreResults: false });
-  } finally {
-    set({ isSearching: false });
-  }
-},
+    try {
+      const response = await axiosInstance.get("/search/messages", {
+        params: { q: query.trim(), type, page, limit: 20 }
+      });
+      
+      const { messages, pagination } = response.data;
+      
+      if (page === 1) {
+        set({
+          globalSearchResults: messages,
+          currentPage: page,
+          totalResults: pagination.totalResults,
+          hasMoreResults: pagination.hasMore
+        });
+      } else {
+        set({
+          globalSearchResults: [...get().globalSearchResults, ...messages],
+          currentPage: page,
+          hasMoreResults: pagination.hasMore
+        });
+      }
+      
+      get().addToSearchHistory(query);
+      
+    } catch (error) {
+      console.error("Global search failed:", error);
+      // 🔧 FIX: Added null checks
+      toast.error(error.response?.data?.error || "Search failed. Please try again.");
+      set({ globalSearchResults: [], totalResults: 0, hasMoreResults: false });
+    } finally {
+      set({ isSearching: false });
+    }
+  },
   
-  // UPDATED: Conversation search for chat container
   searchInConversation: async (query, chatId, chatType, type = "all") => {
     if (!query || query.trim().length < 2) {
       set({ conversationSearchResults: [], totalResults: 0 });
@@ -129,14 +116,14 @@ searchGlobal: async (query, type = "all", page = 1) => {
       
     } catch (error) {
       console.error("Conversation search failed:", error);
-      toast.error("Search failed. Please try again.");
+      // 🔧 FIX: Added null checks
+      toast.error(error.response?.data?.error || "Search failed. Please try again.");
       set({ conversationSearchResults: [], totalResults: 0 });
     } finally {
       set({ isSearching: false });
     }
   },
   
-  // Rest of your existing functions...
   searchChats: async (query) => {
     if (!query || query.trim().length < 2) {
       return { friends: [], groups: [] };
@@ -161,7 +148,13 @@ searchGlobal: async (query, type = "all", page = 1) => {
     
     const newHistory = [trimmedQuery, ...searchHistory.filter(q => q !== trimmedQuery)].slice(0, 10);
     set({ searchHistory: newHistory });
-    localStorage.setItem("chatty_search_history", JSON.stringify(newHistory));
+    
+    // 🔧 FIX: Added error handling for localStorage
+    try {
+      localStorage.setItem("chatty_search_history", JSON.stringify(newHistory));
+    } catch (error) {
+      console.error("Failed to save search history:", error);
+    }
   },
   
   loadSearchHistory: () => {
@@ -172,6 +165,7 @@ searchGlobal: async (query, type = "all", page = 1) => {
       }
     } catch (error) {
       console.error("Failed to load search history:", error);
+      set({ searchHistory: [] }); // 🔧 FIX: Reset to empty array on error
     }
   },
   

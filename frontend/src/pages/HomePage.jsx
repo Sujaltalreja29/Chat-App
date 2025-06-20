@@ -1,117 +1,74 @@
-// src/pages/HomePage.jsx - Fixed height layout
-import { useState, useEffect } from "react";
-import { useChatStore } from "../store/useChatStore";
+// src/pages/HomePage.jsx - Fixed mobile layout to show only sidebar when no chat selected
+import { useState } from "react";
 import { useResponsive } from "../hooks/useResponsive";
 import Sidebar from "../components/Sidebar";
-import NoChatSelected from "../components/NoChatSelected";
 import ChatContainer from "../components/ChatContainer";
-import MobileChatHeader from "../components/MobileChatHeader";
+import NoChatSelected from "../components/NoChatSelected";
+import { useChatStore } from "../store/useChatStore";
 
 const HomePage = () => {
-  const { selectedUser, selectedGroup, chatType } = useChatStore();
-  const { isMobile, isTablet, showMobileLayout, canShowBothPanes } = useResponsive();
-  
-  // Mobile navigation state
+  const { selectedUser, selectedGroup } = useChatStore();
+  const { showMobileLayout } = useResponsive();
   const [showSidebar, setShowSidebar] = useState(!showMobileLayout);
-  const [showChat, setShowChat] = useState(false);
 
-  const hasActiveChat = selectedUser || selectedGroup;
-
-  // Handle responsive layout changes
-  useEffect(() => {
+  const handleChatSelect = () => {
     if (showMobileLayout) {
-      // Mobile: Show sidebar by default, chat when selected
-      setShowSidebar(!hasActiveChat);
-      setShowChat(hasActiveChat);
-    } else {
-      // Desktop: Always show both
-      setShowSidebar(true);
-      setShowChat(true);
-    }
-  }, [hasActiveChat, showMobileLayout]);
-
-  // Handle mobile back navigation
-  const handleBackToSidebar = () => {
-    if (showMobileLayout) {
-      setShowSidebar(true);
-      setShowChat(false);
+      setShowSidebar(false);
     }
   };
 
+  const hasSelectedChat = selectedUser || selectedGroup;
+
   return (
-    <div className={`bg-base-200 flex flex-col overflow-hidden ${
-      showMobileLayout 
-        ? 'h-[calc(100vh-3rem)]' // Mobile: Account for minimal navbar
-        : 'h-[calc(100vh-5rem)]'  // Desktop: Account for full navbar
-    }`}>
+    // Full screen height with proper top spacing for navbar
+    <div className="h-screen flex bg-base-100 pt-16 lg:pt-20">
       
-      {/* Mobile Chat Header (only when chat is active) */}
-      {showMobileLayout && hasActiveChat && showChat && (
-        <div className="flex-none">
-          <MobileChatHeader onBack={handleBackToSidebar} />
-        </div>
-      )}
-
-      {/* Main Chat Layout - Fixed Height */}
-      <div className="flex flex-1 relative overflow-hidden min-h-0">
-        
-        {/* Sidebar */}
-        <div
-          className={`
-            bg-base-100 border-r border-base-300 transition-all duration-300 ease-in-out z-sidebar flex-none
-            ${showMobileLayout 
-              ? `fixed top-0 left-0 h-full ${
-                  showSidebar 
-                    ? 'w-full translate-x-0' 
-                    : 'w-full -translate-x-full'
-                }`
-              : canShowBothPanes
-                ? 'w-96'
-                : 'w-80'
-            }
-          `}
-          style={{
-            height: showMobileLayout ? '100%' : 'auto'
-          }}
-        >
-          <Sidebar 
-            onChatSelect={() => {
-              if (showMobileLayout) {
-                setShowSidebar(false);
-                setShowChat(true);
-              }
-            }}
-            isMobile={showMobileLayout}
-          />
-        </div>
-
-        {/* Chat Container - Fixed Height */}
-        <div
-          className={`
-            flex flex-col transition-all duration-300 ease-in-out flex-1 min-w-0 overflow-hidden
-            ${showMobileLayout 
-              ? `${showChat ? 'block' : 'hidden'}`
-              : 'block'
-            }
-          `}
-        >
-          {hasActiveChat ? (
-            <ChatContainer 
-              onBackClick={handleBackToSidebar}
-              isMobile={showMobileLayout}
-            />
-          ) : (
-            <NoChatSelected />
+      {/* 🔥 MOBILE LAYOUT: Show only sidebar OR chat, never both */}
+      {showMobileLayout ? (
+        <>
+          {/* Mobile Sidebar - Show when no chat selected OR when explicitly showing sidebar */}
+          {(!hasSelectedChat || showSidebar) && (
+            <div className="w-full h-full">
+              <Sidebar 
+                onChatSelect={handleChatSelect}
+                isMobile={showMobileLayout}
+              />
+            </div>
           )}
-        </div>
-      </div>
 
-      {/* Mobile Overlay */}
-      {showMobileLayout && showSidebar && hasActiveChat && (
-        <div
-          className="fixed inset-0 bg-black/20 z-overlay"
-          onClick={handleBackToSidebar}
-        />
+          {/* Mobile Chat - Show only when chat is selected AND sidebar is hidden */}
+          {hasSelectedChat && !showSidebar && (
+            <div className="w-full h-full">
+              <ChatContainer 
+                onBackToSidebar={() => setShowSidebar(true)}
+                isMobile={showMobileLayout}
+              />
+            </div>
+          )}
+        </>
+      ) : (
+        /* 🔥 DESKTOP LAYOUT: Traditional two-panel layout */
+        <>
+          {/* Desktop Sidebar */}
+          <div className="w-80 flex-shrink-0 border-r border-base-300 h-full">
+            <Sidebar 
+              onChatSelect={handleChatSelect}
+              isMobile={false}
+            />
+          </div>
+
+          {/* Desktop Main Chat Area */}
+          <div className="flex-1 flex flex-col h-full">
+            {hasSelectedChat ? (
+              <ChatContainer 
+                onBackToSidebar={() => setShowSidebar(true)}
+                isMobile={false}
+              />
+            ) : (
+              <NoChatSelected />
+            )}
+          </div>
+        </>
       )}
     </div>
   );

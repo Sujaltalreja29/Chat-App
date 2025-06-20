@@ -51,13 +51,13 @@ const GroupsPage = () => {
   };
 
     // ADD THIS MISSING FUNCTION
-  const handleJoinGroup = async (groupId) => {
-    try {
-      await joinGroup(groupId);
-    } catch (error) {
-      // Error is handled in the store
-    }
-  };
+const handleJoinGroup = async (groupId) => {
+  try {
+    await joinGroup(groupId);
+  } catch (error) {
+    // Error handled in store
+  }
+};
 
   const handleDeleteGroup = async (groupId) => {
     if (window.confirm('Are you sure you want to delete this group? This action cannot be undone.')) {
@@ -70,15 +70,12 @@ const GroupsPage = () => {
       <div className="max-w-6xl mx-auto p-4 py-8">
         
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-base-content mb-2 flex items-center justify-center gap-3">
-            <Hash className="w-8 h-8 text-primary" />
-            Groups
-          </h1>
-          <p className="text-base-content/70">
-            Manage your groups and discover new communities
-          </p>
-        </div>
+<div className="text-center mb-6">
+  <h1 className="text-2xl md:text-3xl font-bold flex items-center justify-center gap-2">
+    <Hash className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+    Groups
+  </h1>
+</div>
 
         <div className="grid gap-8 lg:grid-cols-3">
           
@@ -135,7 +132,7 @@ const GroupsPage = () => {
                         className="flex items-center gap-3 p-3 bg-base-200 rounded-lg"
                       >
                         <img
-                          src={group.groupPic || "/group-default.png"}
+                          src={group.groupPic || "/avatar.png"}
                           alt={group.name}
                           className="w-10 h-10 rounded-full object-cover border-2 border-base-300"
                         />
@@ -221,12 +218,12 @@ const GroupsPage = () => {
                           key={group._id}
                           className="card bg-base-200 border border-base-300 hover:shadow-md transition-shadow"
                         >
-                          <div className="card-body p-4">
+                          <div className="card-body p-3 md:p-4">
                             {/* Group Header */}
                             <div className="flex items-center gap-3 mb-3">
                               <div className="relative">
                                 <img
-                                  src={group.groupPic || "/group-default.png"}
+                                  src={group.groupPic || "/avatar.png"}
                                   alt={group.name}
                                   className="w-12 h-12 rounded-full object-cover border-2 border-base-300"
                                 />

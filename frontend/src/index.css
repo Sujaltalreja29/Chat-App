@@ -97,3 +97,26 @@
     box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
   }
 }
+
+/* Add to your main CSS file or index.css */
+
+/* Ensure mobile layout takes full width */
+@media (max-width: 1024px) {
+  .sidebar-mobile {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+  
+  .chat-mobile {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+}
+
+/* Remove any unwanted spacing on mobile */
+@media (max-width: 768px) {
+  .mobile-fullscreen {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  }
+}

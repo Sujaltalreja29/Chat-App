@@ -1,8 +1,9 @@
-// src/App.jsx - Updated padding logic
+// src/App.jsx - Fixed padding logic to remove white space on homepage
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
+import { useLocation } from "react-router-dom"; // ADD THIS IMPORT
 
 import Navbar from "./components/Navbar";
 import ThemeProvider from './components/ThemeProvider';
@@ -28,6 +29,7 @@ const App = () => {
   const { getGroups, subscribeToMessages, unsubscribeFromMessages } = useChatStore();
   const { subscribeToFriendRequests, unsubscribeFromFriendRequests } = useFriendStore();
   const { theme } = useThemeStore();
+  const location = useLocation(); // ADD THIS LINE
   
   // Responsive data
   const { showMobileLayout } = useResponsive();
@@ -79,13 +81,13 @@ const App = () => {
       </div>
     );
 
-  // Calculate proper padding based on page and device
+  // 🔥 FIXED: Remove padding for homepage, keep it for other pages
   const getMainPadding = () => {
     if (!authUser) return '';
     
-    // HomePage gets special treatment
+    // HomePage gets NO padding - navbar will be absolute/fixed positioned
     if (location.pathname === '/') {
-      return showMobileLayout ? 'pt-12' : 'pt-20'; // Minimal navbar height on mobile home
+      return ''; // NO PADDING for homepage
     }
     
     // Other pages get normal navbar height
@@ -99,9 +101,12 @@ const App = () => {
     >
       <ThemeProvider />
       
-      {/* Always show navbar */}
-      <Navbar />
+      {/* Navbar with conditional positioning */}
+      <div className={location.pathname === '/' ? 'absolute top-0 left-0 right-0 z-50' : 'relative'}>
+        <Navbar />
+      </div>
 
+      {/* 🔥 FIXED: Main content with conditional padding */}
       <div className={getMainPadding()}>
         <Routes>
           <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />

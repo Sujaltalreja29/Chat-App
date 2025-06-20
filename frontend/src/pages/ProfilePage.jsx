@@ -1,3 +1,4 @@
+// pages/ProfilePage.jsx - Clean & Responsive
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Camera, Mail, User, Shield, Calendar, CheckCircle, Edit3, Save, X } from "lucide-react";
@@ -31,7 +32,7 @@ const ProfilePage = () => {
       setSelectedImg(base64Image);
       try {
         await updateProfile({ profilePic: base64Image });
-        toast.success("Profile picture updated successfully!");
+        toast.success("Profile picture updated!");
       } catch (error) {
         toast.error("Failed to update profile picture");
         setSelectedImg(null);
@@ -48,7 +49,7 @@ const ProfilePage = () => {
     try {
       await updateProfile({ fullName: editedName.trim() });
       setIsEditing(false);
-      toast.success("Name updated successfully!");
+      toast.success("Name updated!");
     } catch (error) {
       toast.error("Failed to update name");
       setEditedName(authUser?.fullName || "");
@@ -69,29 +70,28 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-base-200 pt-16">
-      <div className="max-w-4xl mx-auto p-4 py-8">
+    <div className="min-h-screen bg-base-200">
+      <div className="max-w-4xl mx-auto p-4 space-y-6">
         
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-base-content mb-2">My Profile</h1>
-          <p className="text-base-content/70">Manage your account settings and preferences</p>
+        {/* Compact Header */}
+        <div className="text-center">
+          <h1 className="text-2xl md:text-3xl font-bold">My Profile</h1>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           
-          {/* Profile Card */}
+          {/* Main Profile Card */}
           <div className="lg:col-span-2">
-            <div className="card bg-base-100 shadow-xl border border-base-300">
-              <div className="card-body">
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body p-4 md:p-6">
                 
                 {/* Avatar Section */}
-                <div className="flex flex-col items-center mb-8">
+                <div className="flex flex-col items-center mb-6">
                   <div className="relative group">
                     <img
                       src={selectedImg || authUser?.profilePic || "/avatar.png"}
                       alt="Profile"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-base-300 shadow-lg"
+                      className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-base-300"
                     />
                     
                     {/* Camera Overlay */}
@@ -101,7 +101,7 @@ const ProfilePage = () => {
                         isUpdatingProfile ? "animate-pulse pointer-events-none" : ""
                       }`}
                     >
-                      <Camera className="w-8 h-8 text-white" />
+                      <Camera className="w-6 h-6 text-white" />
                       <input
                         type="file"
                         id="avatar-upload"
@@ -115,28 +115,24 @@ const ProfilePage = () => {
                     {/* Upload Button */}
                     <label
                       htmlFor="avatar-upload"
-                      className={`absolute -bottom-2 -right-2 btn btn-primary btn-circle btn-sm cursor-pointer shadow-lg ${
+                      className={`absolute -bottom-1 -right-1 btn btn-primary btn-circle btn-sm cursor-pointer ${
                         isUpdatingProfile ? "loading" : ""
                       }`}
                     >
-                      <Camera className="w-4 h-4" />
+                      {!isUpdatingProfile && <Camera className="w-4 h-4" />}
                     </label>
                   </div>
 
-                  <p className="text-sm text-base-content/60 mt-3 text-center">
-                    {isUpdatingProfile ? (
-                      <span className="flex items-center gap-2">
-                        <span className="loading loading-spinner loading-xs"></span>
-                        Uploading...
-                      </span>
-                    ) : (
-                      "Click the camera icon to update your photo"
-                    )}
-                  </p>
+                  {isUpdatingProfile && (
+                    <p className="text-sm text-base-content/60 mt-2 flex items-center gap-2">
+                      <span className="loading loading-spinner loading-xs"></span>
+                      Uploading...
+                    </p>
+                  )}
                 </div>
 
                 {/* Profile Information */}
-                <div className="space-y-6">
+                <div className="space-y-4">
                   
                   {/* Full Name */}
                   <div className="form-control">
@@ -156,10 +152,10 @@ const ProfilePage = () => {
                           className="input input-bordered flex-1"
                           placeholder="Enter your full name"
                         />
-                        <button onClick={handleNameUpdate} className="btn btn-success btn-square">
+                        <button onClick={handleNameUpdate} className="btn btn-success btn-sm">
                           <Save className="w-4 h-4" />
                         </button>
-                        <button onClick={cancelEdit} className="btn btn-error btn-square">
+                        <button onClick={cancelEdit} className="btn btn-error btn-sm">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -196,30 +192,30 @@ const ProfilePage = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             
             {/* Account Status */}
-            <div className="card bg-base-100 shadow-xl border border-base-300">
-              <div className="card-body">
-                <h3 className="card-title text-base-content mb-4 flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-primary" />
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-primary" />
                   Account Status
                 </h3>
                 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-base-content/70">Status</span>
-                    <div className="badge badge-success gap-2">
+                    <span className="text-sm text-base-content/70">Status</span>
+                    <div className="badge badge-success badge-sm gap-1">
                       <CheckCircle className="w-3 h-3" />
                       Active
                     </div>
                   </div>
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-base-content/70">Verification</span>
-                    <div className="badge badge-success gap-2">
+                    <span className="text-sm text-base-content/70">Verified</span>
+                    <div className="badge badge-success badge-sm gap-1">
                       <CheckCircle className="w-3 h-3" />
-                      Verified
+                      Yes
                     </div>
                   </div>
                 </div>
@@ -227,46 +223,27 @@ const ProfilePage = () => {
             </div>
 
             {/* Account Details */}
-            <div className="card bg-base-100 shadow-xl border border-base-300">
-              <div className="card-body">
-                <h3 className="card-title text-base-content mb-4 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" />
+            <div className="card bg-base-100 shadow-sm">
+              <div className="card-body p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" />
                   Account Details
                 </h3>
                 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div>
                     <span className="text-sm text-base-content/70">Member Since</span>
-                    <p className="text-base-content font-medium">
+                    <p className="text-sm font-medium">
                       {authUser?.createdAt ? formatDate(authUser.createdAt) : 'N/A'}
                     </p>
                   </div>
                   
                   <div>
                     <span className="text-sm text-base-content/70">Account ID</span>
-                    <p className="text-base-content font-mono text-sm">
+                    <p className="text-xs font-mono">
                       {authUser?._id?.slice(-8).toUpperCase() || 'N/A'}
                     </p>
                   </div>
-                </div>
-              </div>
-            </div>
-
-                        {/* Quick Actions */}
-            <div className="card bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 shadow-xl">
-              <div className="card-body">
-                <h3 className="card-title text-base-content mb-4">Quick Actions</h3>
-                
-                <div className="space-y-2">
-                  <button className="btn btn-ghost w-full justify-start">
-                    Privacy Settings
-                  </button>
-                  <button className="btn btn-ghost w-full justify-start">
-                    Notification Preferences
-                  </button>
-                  <button className="btn btn-ghost w-full justify-start">
-                    Download Data
-                  </button>
                 </div>
               </div>
             </div>
