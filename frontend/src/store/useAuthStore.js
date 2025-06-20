@@ -93,7 +93,7 @@ export const useAuthStore = create((set, get) => ({
     const { authUser } = get();
     if (!authUser || get().socket?.connected) return;
 
-    const socketURL = import.meta.env.MODE === "development" ? "http://localhost:5001" : "http://localhost:5001";
+    const socketURL = import.meta.env.VITE_SOCKET_URL;
     
     const socket = io(socketURL, {
       query: {

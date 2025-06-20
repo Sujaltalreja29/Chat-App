@@ -19,13 +19,14 @@ dotenv.config();
 
 const PORT = process.env.PORT;
 const __dirname = path.resolve();
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true,
   })
 );
