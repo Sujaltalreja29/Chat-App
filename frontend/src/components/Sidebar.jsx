@@ -422,7 +422,6 @@ const highlightSearchTerm = (text, query) => {
                     <span className="ml-1">Chats</span>
                     {users.reduce((sum, user) => sum + (user.unreadCount || 0), 0) > 0 && (
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-error text-white text-xs font-bold rounded-full flex items-center justify-center">
-                        // Sidebar.jsx (continued)
                         {users.reduce((sum, user) => sum + (user.unreadCount || 0), 0) > 9 ? '9+' : users.reduce((sum, user) => sum + (user.unreadCount || 0), 0)}
                       </div>
                     )}
@@ -739,7 +738,6 @@ const highlightSearchTerm = (text, query) => {
                   <div className="flex flex-col items-center justify-center h-full text-center px-4">
                     {users.length === 0 ? (
                       <>
-                        // Sidebar.jsx (continued)
                         <Users className={`text-base-content/30 mb-3 ${
                           showMobileLayout ? 'w-10 h-10' : 'w-12 h-12'
                         }`} />

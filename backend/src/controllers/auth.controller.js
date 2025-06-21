@@ -1,7 +1,12 @@
+// controllers/auth.controller.js - With Google Auth
 import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
+import { OAuth2Client } from 'google-auth-library';
+
+// Initialize Google OAuth client
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Input validation helpers
 const validateEmail = (email) => {
@@ -15,6 +20,28 @@ const validatePassword = (password) => {
 
 const validateFullName = (fullName) => {
   return fullName && fullName.trim().length >= 2 && fullName.trim().length <= 50;
+};
+
+// 🆕 Helper function to verify Google token
+const verifyGoogleToken = async (credential) => {
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    return {
+      googleId: payload.sub,
+      email: payload.email,
+      fullName: payload.name,
+      profilePic: payload.picture,
+      emailVerified: payload.email_verified
+    };
+  } catch (error) {
+    console.error('Google token verification failed:', error);
+    throw new Error('Invalid Google token');
+  }
 };
 
 export const signup = async (req, res) => {
@@ -100,6 +127,80 @@ export const signup = async (req, res) => {
   }
 };
 
+// 🆕 Google Signup
+export const googleSignup = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ 
+        message: "Google credential is required" 
+      });
+    }
+
+    // Verify Google token
+    const googleUser = await verifyGoogleToken(credential);
+
+    if (!googleUser.emailVerified) {
+      return res.status(400).json({ 
+        message: "Please use a verified Google email address" 
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ 
+      $or: [
+        { email: googleUser.email.toLowerCase() },
+        { googleId: googleUser.googleId }
+      ]
+    });
+
+    if (existingUser) {
+      return res.status(409).json({ 
+        message: "Account already exists. Please sign in instead." 
+      });
+    }
+
+    // Create new user with Google data
+    const newUser = new User({
+      fullName: googleUser.fullName,
+      email: googleUser.email.toLowerCase(),
+      profilePic: googleUser.profilePic,
+      googleId: googleUser.googleId,
+      isGoogleUser: true,
+      // Google users don't need a password
+      password: undefined
+    });
+
+    await newUser.save();
+
+    // Generate token
+    generateToken(newUser._id, res);
+
+    // Return user data
+    res.status(201).json({
+      _id: newUser._id,
+      fullName: newUser.fullName,
+      email: newUser.email,
+      profilePic: newUser.profilePic,
+      isGoogleUser: true
+    });
+
+  } catch (error) {
+    console.error("Error in Google signup:", error);
+    
+    if (error.message === 'Invalid Google token') {
+      return res.status(400).json({ 
+        message: "Invalid Google authentication. Please try again." 
+      });
+    }
+    
+    res.status(500).json({ 
+      message: "Failed to create account with Google. Please try again." 
+    });
+  }
+};
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -125,6 +226,13 @@ export const login = async (req, res) => {
       });
     }
 
+    // Check if user is a Google user
+    if (user.isGoogleUser) {
+      return res.status(400).json({ 
+        message: "This account uses Google sign-in. Please use Google to log in." 
+      });
+    }
+
     // Check password
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
     if (!isPasswordCorrect) {
@@ -146,6 +254,67 @@ export const login = async (req, res) => {
   } catch (error) {
     console.error("Error in login controller:", error);
     res.status(500).json({ message: "Failed to login. Please try again." });
+  }
+};
+
+// 🆕 Google Login
+export const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ 
+        message: "Google credential is required" 
+      });
+    }
+
+    // Verify Google token
+    const googleUser = await verifyGoogleToken(credential);
+
+    // Find existing user
+    const existingUser = await User.findOne({ 
+      $or: [
+        { email: googleUser.email.toLowerCase() },
+        { googleId: googleUser.googleId }
+      ]
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ 
+        message: "No account found. Please sign up first." 
+      });
+    }
+
+    // Update user with Google ID if not present
+    if (!existingUser.googleId) {
+      existingUser.googleId = googleUser.googleId;
+      existingUser.isGoogleUser = true;
+      await existingUser.save();
+    }
+
+    // Generate token
+    generateToken(existingUser._id, res);
+
+    res.status(200).json({
+      _id: existingUser._id,
+      fullName: existingUser.fullName,
+      email: existingUser.email,
+      profilePic: existingUser.profilePic,
+      isGoogleUser: existingUser.isGoogleUser
+    });
+
+  } catch (error) {
+    console.error("Error in Google login:", error);
+    
+    if (error.message === 'Invalid Google token') {
+      return res.status(400).json({ 
+        message: "Invalid Google authentication. Please try again." 
+      });
+    }
+    
+    res.status(500).json({ 
+      message: "Failed to login with Google. Please try again." 
+    });
   }
 };
 
@@ -212,7 +381,7 @@ export const updateProfile = async (req, res) => {
       });
     }
     
-    res.status(500).json({ message: "Failed to update profile. Please try again." });
+        res.status(500).json({ message: "Failed to update profile. Please try again." });
   }
 };
 

@@ -1,4 +1,4 @@
-// store/useAuthStore.js - Only critical fixes
+// store/useAuthStore.js - With Google Auth
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
@@ -21,7 +21,6 @@ export const useAuthStore = create((set, get) => ({
       set({ authUser: res.data });
       get().connectSocket();
     } catch (error) {
-      // 🔧 FIX: Fixed variable name (was 'err')
       if (error.response?.status !== 401) {
         console.error("Error in checkAuth:", error);
       }
@@ -39,8 +38,25 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Account created successfully");
       get().connectSocket();
     } catch (error) {
-      // 🔧 FIX: Added null check
       toast.error(error.response?.data?.message || "Signup failed");
+    } finally {
+      set({ isSigningUp: false });
+    }
+  },
+
+  // 🆕 Google Signup
+  signupWithGoogle: async (credential) => {
+    set({ isSigningUp: true });
+    try {
+      const res = await axiosInstance.post("/auth/google-signup", {
+        credential: credential
+      });
+      set({ authUser: res.data });
+      toast.success("Account created successfully with Google!");
+      get().connectSocket();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Google signup failed");
+      throw error;
     } finally {
       set({ isSigningUp: false });
     }
@@ -54,8 +70,25 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Logged in successfully");
       get().connectSocket();
     } catch (error) {
-      // 🔧 FIX: Added null check
       toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      set({ isLoggingIn: false });
+    }
+  },
+
+  // 🆕 Google Login
+  loginWithGoogle: async (credential) => {
+    set({ isLoggingIn: true });
+    try {
+      const res = await axiosInstance.post("/auth/google-login", {
+        credential: credential
+      });
+      set({ authUser: res.data });
+      toast.success("Logged in successfully with Google!");
+      get().connectSocket();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Google login failed");
+      throw error;
     } finally {
       set({ isLoggingIn: false });
     }
@@ -68,7 +101,6 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Logged out successfully");
       get().disconnectSocket();
     } catch (error) {
-      // 🔧 FIX: Added null check and still disconnect on error
       toast.error(error.response?.data?.message || "Logout failed");
       get().disconnectSocket();
     }
@@ -82,7 +114,6 @@ export const useAuthStore = create((set, get) => ({
       toast.success("Profile updated successfully");
     } catch (error) {
       console.log("error in update profile:", error);
-      // 🔧 FIX: Added null check
       toast.error(error.response?.data?.message || "Update failed");
     } finally {
       set({ isUpdatingProfile: false });
@@ -124,7 +155,6 @@ export const useAuthStore = create((set, get) => ({
   },
 
   disconnectSocket: () => {
-    // 🔧 FIX: Added null checks and error handling
     const socket = get().socket;
     if (socket) {
       try {

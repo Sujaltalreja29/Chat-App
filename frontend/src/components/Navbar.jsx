@@ -128,7 +128,7 @@ const Navbar = () => {
                         <div className="w-8 h-8 rounded-full ring ring-base-300 ring-offset-2 ring-offset-base-100">
                           {authUser.profilePic ? (
                             <img 
-                              src={authUser.profilePic} 
+                              src={"avatar.png"} 
                               alt={authUser.fullName}
                               className="w-full h-full object-cover"
                             />
@@ -157,7 +157,7 @@ const Navbar = () => {
                               <div className="w-10 h-10 rounded-full ring ring-base-300 ring-offset-1 ring-offset-base-100">
                                 {authUser.profilePic ? (
                                   <img 
-                                    src={authUser.profilePic} 
+                                    src={"avatar.png"} 
                                     alt={authUser.fullName}
                                     className="w-full h-full object-cover"
                                   />
@@ -227,7 +227,7 @@ const Navbar = () => {
                   <div className="w-8 h-8 rounded-full ring ring-base-300 ring-offset-1 ring-offset-base-100">
                     {authUser.profilePic ? (
                       <img 
-                        src={authUser.profilePic} 
+                        src={"avatar.png"} 
                         alt={authUser.fullName}
                         className="w-full h-full object-cover"
                       />
@@ -274,7 +274,7 @@ const Navbar = () => {
                 <div className="w-12 h-12 rounded-full ring ring-base-300 ring-offset-2 ring-offset-base-200">
                   {authUser.profilePic ? (
                     <img 
-                      src={authUser.profilePic} 
+                      src={"avatar.png"} 
                       alt={authUser.fullName}
                       className="w-full h-full object-cover"
                     />

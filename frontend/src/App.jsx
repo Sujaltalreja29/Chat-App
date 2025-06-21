@@ -1,9 +1,9 @@
-// src/App.jsx - Fixed padding logic to remove white space on homepage
+// src/App.jsx - Fixed with proper auth redirects and landing page routing
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
-import { Loader } from "lucide-react";
+import { Loader, MessageSquare } from "lucide-react";
 import { Toaster } from "react-hot-toast";
-import { useLocation } from "react-router-dom"; // ADD THIS IMPORT
+import { useLocation } from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 import ThemeProvider from './components/ThemeProvider';
@@ -15,6 +15,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import FriendsPage from './pages/FriendsPage';
 import GroupsPage from './pages/GroupsPage';
+import LandingPage from "./pages/LandingPage";
 
 import { useFriendStore } from './store/useFriendStore';
 import { useGroupStore } from './store/useGroupStore';
@@ -22,6 +23,7 @@ import { useChatStore } from './store/useChatStore';
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 import { useResponsive } from './hooks/useResponsive';
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers, socket } = useAuthStore();
@@ -29,7 +31,7 @@ const App = () => {
   const { getGroups, subscribeToMessages, unsubscribeFromMessages } = useChatStore();
   const { subscribeToFriendRequests, unsubscribeFromFriendRequests } = useFriendStore();
   const { theme } = useThemeStore();
-  const location = useLocation(); // ADD THIS LINE
+  const location = useLocation();
   
   // Responsive data
   const { showMobileLayout } = useResponsive();
@@ -77,62 +79,107 @@ const App = () => {
   if (isCheckingAuth && !authUser)
     return (
       <div className="flex items-center justify-center h-screen bg-base-100">
-        <Loader className="size-10 animate-spin text-primary" />
+        <MessageSquare className="size-10 animate-pulse rounded-lg text-primary-content" />
       </div>
     );
 
-  // 🔥 FIXED: Remove padding for homepage, keep it for other pages
+  // Helper to determine if current page should show navbar
+  const shouldShowNavbar = () => {
+    const noNavbarPages = ['/landing'];
+    return !noNavbarPages.includes(location.pathname);
+  };
+
+  // Get main content padding based on route and auth status
   const getMainPadding = () => {
     if (!authUser) return '';
     
     // HomePage gets NO padding - navbar will be absolute/fixed positioned
     if (location.pathname === '/') {
-      return ''; // NO PADDING for homepage
+      return '';
     }
     
-    // Other pages get normal navbar height
+    // Other authenticated pages get normal navbar height
     return showMobileLayout ? 'pt-16' : 'pt-20';
   };
 
   return (
-    <div 
-      data-theme={theme} 
-      className={`min-h-screen bg-base-100 ${showMobileLayout ? 'overflow-x-hidden' : ''}`}
-    >
-      <ThemeProvider />
-      
-      {/* Navbar with conditional positioning */}
-      <div className={location.pathname === '/' ? 'absolute top-0 left-0 right-0 z-50' : 'relative'}>
-        <Navbar />
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <div 
+        data-theme={theme} 
+        className={`min-h-screen bg-base-100 ${showMobileLayout ? 'overflow-x-hidden' : ''}`}
+      >
+        <ThemeProvider />
+        
+        {/* Conditional Navbar rendering */}
+        {shouldShowNavbar() && (
+          <div className={location.pathname === '/' ? 'absolute top-0 left-0 right-0 z-50' : 'relative'}>
+            <Navbar />
+          </div>
+        )}
+
+        <div className={getMainPadding()}>
+          <Routes>
+            {/* 🆕 Landing page as default for non-authenticated users */}
+            <Route 
+              path="/landing" 
+              element={!authUser ? <LandingPage /> : <Navigate to="/" />} 
+            />
+            
+            {/* Auth pages */}
+            <Route 
+              path="/signup" 
+              element={!authUser ? <SignUpPage /> : <Navigate to="/" />} 
+            />
+            <Route 
+              path="/login" 
+              element={!authUser ? <LoginPage /> : <Navigate to="/" />} 
+            />
+            
+            {/* Protected routes - redirect to landing if not authenticated */}
+            <Route 
+              path="/" 
+              element={authUser ? <HomePage /> : <Navigate to="/landing" />} 
+            />
+            <Route 
+              path="/settings" 
+              element={authUser ? <SettingsPage /> : <Navigate to="/landing" />} 
+            />
+            <Route 
+              path="/friends" 
+              element={authUser ? <FriendsPage /> : <Navigate to="/landing" />} 
+            />
+            <Route 
+              path="/groups" 
+              element={authUser ? <GroupsPage /> : <Navigate to="/landing" />} 
+            />
+            <Route 
+              path="/profile" 
+              element={authUser ? <ProfilePage /> : <Navigate to="/landing" />} 
+            />
+            
+            {/* Catch all route - redirect based on auth status */}
+            <Route 
+              path="*" 
+              element={<Navigate to={authUser ? "/" : "/landing"} replace />} 
+            />
+          </Routes>
+        </div>
+
+        <Toaster
+          position={showMobileLayout ? "top-center" : "top-right"}
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: 'var(--fallback-b1,oklch(var(--b1)))',
+              color: 'var(--fallback-bc,oklch(var(--bc)))',
+              border: '1px solid var(--fallback-b3,oklch(var(--b3)))',
+              fontSize: showMobileLayout ? '14px' : '16px',
+              padding: showMobileLayout ? '8px 12px' : '12px 16px',
+            },
+          }}
+        />
       </div>
-
-
-      <div className={getMainPadding()}>
-        <Routes>
-          <Route path="/" element={authUser ? <HomePage /> : <Navigate to="/login" />} />
-          <Route path="/signup" element={!authUser ? <SignUpPage /> : <Navigate to="/" />} />
-          <Route path="/login" element={!authUser ? <LoginPage /> : <Navigate to="/" />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/friends" element={<FriendsPage />} />
-          <Route path="/groups" element={<GroupsPage />} />
-          <Route path="/profile" element={authUser ? <ProfilePage /> : <Navigate to="/" />} />
-        </Routes>
-      </div>
-
-      <Toaster
-        position={showMobileLayout ? "top-center" : "top-right"}
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: 'var(--fallback-b1,oklch(var(--b1)))',
-            color: 'var(--fallback-bc,oklch(var(--bc)))',
-            border: '1px solid var(--fallback-b3,oklch(var(--b3)))',
-            fontSize: showMobileLayout ? '14px' : '16px',
-            padding: showMobileLayout ? '8px 12px' : '12px 16px',
-          },
-        }}
-      />
-    </div>
+    </GoogleOAuthProvider>
   );
 };
 

@@ -14,13 +14,25 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: function() {
+        return !this.isGoogleUser; // Password not required for Google users
+      },
       minlength: 6,
     },
     profilePic: {
       type: String,
       default: "",
     },
+        googleId: {
+      type: String,
+      unique: true,
+      sparse: true, // Allows null values but ensures uniqueness when present
+    },
+    isGoogleUser: {
+      type: Boolean,
+      default: false,
+    },
+
     // NEW: Friend System Fields
     friends: [{
       type: mongoose.Schema.Types.ObjectId,

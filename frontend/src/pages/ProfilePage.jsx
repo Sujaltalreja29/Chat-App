@@ -68,6 +68,7 @@ const ProfilePage = () => {
       day: 'numeric'
     });
   };
+  console.log("authUser", authUser);
 
   return (
     <div className="min-h-screen bg-base-200">
@@ -89,7 +90,7 @@ const ProfilePage = () => {
                 <div className="flex flex-col items-center mb-6">
                   <div className="relative group">
                     <img
-                      src={selectedImg || authUser?.profilePic || "/avatar.png"}
+                      src={"/avatar.png"}
                       alt="Profile"
                       className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-base-300"
                     />
