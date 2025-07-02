@@ -1,4 +1,4 @@
-// pages/LandingPage.jsx - Modern Landing Page
+// pages/LandingPage.jsx - Updated with proper spacing and mobile responsiveness
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -103,184 +103,105 @@ const LandingPage = () => {
     }
   ];
 
-  const pricingPlans = [
-    {
-      name: "Free",
-      price: "$0",
-      period: "forever",
-      description: "Perfect for personal use",
-      features: [
-        "Unlimited 1-on-1 chats",
-        "Group chats up to 10 people",
-        "5GB file storage",
-        "Basic search",
-        "Mobile & web access"
-      ],
-      popular: false,
-      cta: "Get Started Free"
-    },
-    {
-      name: "Pro",
-      price: "$9.99",
-      period: "per month",
-      description: "Great for teams and power users",
-      features: [
-        "Everything in Free",
-        "Unlimited group size",
-        "100GB file storage",
-        "Advanced search",
-        "Voice & video calls",
-        "Priority support"
-      ],
-      popular: true,
-      cta: "Start Free Trial"
-    },
-    {
-      name: "Enterprise",
-      price: "Custom",
-      period: "pricing",
-      description: "For large organizations",
-      features: [
-        "Everything in Pro",
-        "Unlimited storage",
-        "Advanced admin controls",
-        "SSO integration",
-        "24/7 dedicated support",
-        "Custom integrations"
-      ],
-      popular: false,
-      cta: "Contact Sales"
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-base-100">
-      {/* Navigation */}
-      <div className="navbar bg-base-100 border-b border-base-300 sticky top-0 z-50 backdrop-blur-lg bg-base-100/90">
-        <div className="container mx-auto px-4">
-          <div className="flex-1">
-            <Link to="/" className="btn btn-ghost text-xl font-bold">
-              <MessageCircle className="w-6 h-6 text-primary mr-2" />
-              Chatty
-            </Link>
-          </div>
-          <div className="flex-none">
-            <div className="hidden md:flex items-center space-x-4">
-              <a href="#features" className="btn btn-ghost">Features</a>
-              <Link to="/login" className="btn btn-ghost">Sign In</Link>
-              <Link to="/signup" className="btn btn-primary">Get Started</Link>
-            </div>
-            <div className="dropdown dropdown-end md:hidden">
-              <div tabIndex={0} role="button" className="btn btn-ghost">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
+      {/* Hero Section - Added proper top padding to account for fixed navbar */}
+      <section className="min-h-screen bg-gradient-to-br from-base-200 to-base-300 pt-20 md:pt-24">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
+          <div className="w-full max-w-6xl mx-auto">
+            <div className="text-center space-y-6 md:space-y-8 lg:space-y-10 mb-12" >
+              {/* Main Heading - Improved mobile responsiveness */}
+              <div className="space-y-4 pt-12">
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-5xl xl:text-6xl font-bold text-base-content leading-tight">
+                  <span className="block">Connect, Chat, and</span>
+                  <span className="text-primary block bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                    Collaborate
+                  </span>
+                </h1>
               </div>
-              <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-                <li><a href="#features">Features</a></li>
-                <li><Link to="/login">Sign In</Link></li>
-                <li><Link to="/signup">Get Started</Link></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Hero Section */}
-      <section className="hero min-h-screen bg-gradient-to-br from-base-200 to-base-300">
-        <div className="hero-content text-center max-w-4xl mx-auto px-4">
-          <div className="space-y-8">
+              {/* Subtitle - Better mobile spacing */}
+              <div className="max-w-3xl mx-auto px-4">
+                <p className="text-lg sm:text-xl md:text-2xl text-base-content/80 leading-relaxed">
+                  The modern messaging platform that brings people together. 
+                  Fast, secure, and feature-rich communication for everyone.
+                </p>
+              </div>
 
-            {/* Main Heading */}
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-base-content leading-tight pt-8">
-              Connect, Chat, and
-              <span className="text-primary block">Collaborate</span>
-            </h1>
+              {/* CTA Buttons - Improved mobile layout */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6 md:pt-8">
+                <Link 
+                  to="/signup" 
+                  className="btn btn-primary btn-lg gap-2 rounded-full text-base md:text-lg px-8 py-4 h-auto min-h-[3.5rem] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                >
+                  Start Chatting
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+              </div>
 
-            {/* Subtitle */}
-            <p className="text-lg md:text-xl text-base-content/80 max-w-2xl mx-auto leading-relaxed">
-              The modern messaging platform that brings people together. 
-              Fast, secure, and feature-rich communication for everyone.
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <Link to="/signup" className="btn btn-primary btn-lg gap-2">
-                Start Chatting Free
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-            </div>
-
-            {/* Demo Preview */}
-            <div className="pt-8 pb-8">
-              <div className="mockup-browser border border-base-300 bg-base-100 shadow-2xl max-w-4xl mx-auto">
-                <div className="mockup-browser-toolbar">
-                  <div className="input">https://chatty.com</div>
-                </div>
-                <div className="bg-base-200 px-4 py-8">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Chat Preview */}
-                    <div className="md:col-span-2">
-                      <div className="card bg-base-100 shadow-lg">
-                        <div className="card-body p-4">
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="avatar online">
-                              <div className="w-10 rounded-full">
-                                <img src="/avatar.png" alt="User" />
+              {/* Demo Preview - Enhanced mobile responsiveness */}
+              <div className="pt-8 md:pt-12 lg:pt-16">
+                <div className="mockup-browser border border-base-300 bg-base-100 shadow-2xl max-w-5xl mx-auto transform hover:scale-105 transition-transform duration-500">
+                  <div className="mockup-browser-toolbar">
+                    <div className="input text-sm md:text-base">https://chatty.com</div>
+                  </div>
+                  <div className="bg-base-200 p-4 md:p-6 lg:p-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+                      {/* Chat Preview */}
+                      <div className="lg:col-span-2">
+                        <div className="card bg-base-100 shadow-lg">
+                          <div className="card-body p-3 md:p-4 lg:p-6">
+                            <div className="flex items-center gap-3 mb-4">
+                              <div className="avatar online">
+                                <div className="w-8 md:w-10 lg:w-12 rounded-full">
+                                  <img src="/avatar.png" alt="User" />
+                                </div>
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-sm md:text-base lg:text-lg">Team Chat</h3>
+                                <p className="text-xs md:text-sm text-base-content/60">5 members online</p>
                               </div>
                             </div>
-                            <div>
-                              <h3 className="font-semibold">Team Chat</h3>
-                              <p className="text-sm text-base-content/60">5 members online</p>
-                            </div>
-                          </div>
-                          <div className="space-y-3">
-                            <div className="chat chat-start">
-                              <div className="chat-bubble chat-bubble-primary text-sm">
-                                Hey team! 👋 Ready for today's standup?
+                            <div className="space-y-3">
+                              <div className="chat chat-start">
+                                <div className="chat-bubble chat-bubble-primary text-xs md:text-sm">
+                                  Hey team! 👋 Ready for today's standup?
+                                </div>
                               </div>
-                            </div>
-                            <div className="chat chat-end">
-                              <div className="chat-bubble text-sm">
-                                Absolutely! Just finished the new feature
+                              <div className="chat chat-end">
+                                <div className="chat-bubble text-xs md:text-sm">
+                                  Absolutely! Just finished the new feature
+                                </div>
                               </div>
-                            </div>
-                            <div className="chat chat-start">
-                              <div className="chat-bubble chat-bubble-secondary text-sm">
-                                Awesome work! 🚀
+                              <div className="chat chat-start">
+                                <div className="chat-bubble chat-bubble-secondary text-xs md:text-sm">
+                                  Awesome work! 🚀
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    {/* Sidebar Preview */}
-                    <div className="space-y-2">
-                      <div className="card bg-base-100 shadow-sm">
-                        <div className="card-body p-3">
-                          <div className="flex items-center gap-2">
-                            <Hash className="w-4 h-4 text-primary" />
-                            <span className="text-sm font-medium">Friends</span>
-                            <div className="badge badge-primary badge-xs">3</div>
+                      
+                      {/* Sidebar Preview */}
+                      <div className="space-y-2 md:space-y-3">
+                        {[
+                          { icon: Hash, label: "Friends", badge: "3", color: "text-primary" },
+                          { icon: Users, label: "Groups", color: "text-secondary" },
+                          { icon: MessageCircle, label: "Random", color: "text-accent" }
+                        ].map((item, index) => (
+                          <div key={index} className="card bg-base-100 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="card-body p-2 md:p-3">
+                              <div className="flex items-center gap-2">
+                                <item.icon className={`w-3 md:w-4 h-3 md:h-4 ${item.color}`} />
+                                <span className="text-xs md:text-sm font-medium">{item.label}</span>
+                                {item.badge && (
+                                  <div className="badge badge-primary badge-xs">{item.badge}</div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                      <div className="card bg-base-100 shadow-sm">
-                        <div className="card-body p-3">
-                          <div className="flex items-center gap-2">
-                            <Users className="w-4 h-4 text-secondary" />
-                            <span className="text-sm font-medium">Groups</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="card bg-base-100 shadow-sm">
-                        <div className="card-body p-3">
-                          <div className="flex items-center gap-2">
-                            <MessageCircle className="w-4 h-4 text-accent" />
-                            <span className="text-sm font-medium">Random</span>
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -297,27 +218,27 @@ const LandingPage = () => {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20  bg-base-200">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-base-content mb-4">
+      <section id="features" className="py-16 md:py-20 lg:py-24 bg-base-200">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 md:mb-16 lg:mb-20">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-base-content mb-4 md:mb-6">
               Everything you need to
               <span className="text-primary block">stay connected</span>
             </h2>
-            <p className="text-xl text-base-content/70 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl lg:text-2xl text-base-content/70 max-w-3xl mx-auto">
               Powerful features designed to make communication effortless and enjoyable
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {features.map((feature, index) => (
-              <div key={index} className="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow">
-                <div className="card-body">
-                  <div className={`w-12 h-12 rounded-lg bg-opacity-20 flex items-center justify-center mb-4 ${feature.color.replace('text-', 'bg-')}`}>
-                    <feature.icon className={`w-6 h-6 ${feature.color}`} />
+              <div key={index} className="card bg-base-100 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+                <div className="card-body p-6 md:p-8">
+                  <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl bg-opacity-20 flex items-center justify-center mb-4 md:mb-6 ${feature.color.replace('text-', 'bg-')}`}>
+                    <feature.icon className={`w-6 h-6 md:w-8 md:h-8 ${feature.color}`} />
                   </div>
-                  <h3 className="card-title text-xl">{feature.title}</h3>
-                  <p className="text-base-content/70">{feature.description}</p>
+                  <h3 className="card-title text-lg md:text-xl lg:text-2xl mb-2 md:mb-3">{feature.title}</h3>
+                  <p className="text-base-content/70 text-sm md:text-base leading-relaxed">{feature.description}</p>
                 </div>
               </div>
             ))}
@@ -326,76 +247,45 @@ const LandingPage = () => {
       </section>
 
       {/* Platform Support Section */}
-      <section className="py-20 bg-base-100">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold text-base-content mb-4">
+      <section className="py-16 md:py-20 lg:py-24 bg-base-100">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12 md:mb-16">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-base-content mb-4 md:mb-6">
               Available everywhere
               <span className="text-info block">you are</span>
             </h2>
-            <p className="text-xl text-base-content/70">
+            <p className="text-lg md:text-xl text-base-content/70">
               Access your conversations on any device, anytime
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* <div className="card bg-base-200 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="card-body text-center">
-                <Smartphone className="w-16 h-16 text-primary mx-auto mb-4" />
-                <h3 className="card-title justify-center">Mobile Apps</h3>
-                <p className="text-base-content/70">Native iOS and Android apps with full feature support</p>
-              </div>
-            </div> */}
-            <div className="card bg-base-200 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="card-body text-center">
-                <Monitor className="w-16 h-16 text-secondary mx-auto mb-4" />
-                <h3 className="card-title justify-center">Desktop</h3>
-                <p className="text-base-content/70">Windows, macOS, and Linux desktop applications</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
+            <div className="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+              <div className="card-body text-center p-6 md:p-8">
+                <Monitor className="w-16 h-16 md:w-20 md:h-20 text-secondary mx-auto mb-4 md:mb-6" />
+                <h3 className="card-title justify-center text-lg md:text-xl lg:text-2xl mb-2 md:mb-3">Desktop</h3>
+                <p className="text-base-content/70 text-sm md:text-base">Windows, macOS, and Linux desktop applications</p>
               </div>
             </div>
-            <div className="card bg-base-200 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="card-body text-center">
-                <Tablet className="w-16 h-16 text-accent mx-auto mb-4" />
-                <h3 className="card-title justify-center">Web Browser</h3>
-                <p className="text-base-content/70">Full-featured web app accessible from any browser</p>
+            <div className="card bg-base-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+              <div className="card-body text-center p-6 md:p-8">
+                <Tablet className="w-16 h-16 md:w-20 md:h-20 text-accent mx-auto mb-4 md:mb-6" />
+                <h3 className="card-title justify-center text-lg md:text-xl lg:text-2xl mb-2 md:mb-3">Web Browser</h3>
+                <p className="text-base-content/70 text-sm md:text-base">Full-featured web app accessible from any browser</p>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-primary to-secondary">
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-3xl mx-auto text-primary-content">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">
-              Ready to transform your communication?
-            </h2>
-            <p className="text-xl mb-8 opacity-90">
-              Join millions of users who trust Chatty for their daily conversations. 
-              Start your journey today - it's free!
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/signup" className="btn btn-accent btn-lg gap-2">
-                Get Started Free
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link to="/login" className="btn btn-outline btn-lg text-white border-white hover:bg-white hover:text-primary">
-                Sign In
-              </Link>
             </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="footer footer-center p-10 bg-base-200 text-base-content">
-        <div className="grid grid-flow-col gap-4">
-          <a className="link link-hover">About</a>
-          <a className="link link-hover">Contact</a>
-          <a className="link link-hover">Privacy Policy</a>
-          <a className="link link-hover">Terms of Service</a>
-          <a className="link link-hover">Support</a>
+      <footer className="footer footer-center p-8 md:p-10 lg:p-12 bg-base-200 text-base-content">
+        <div className="grid grid-flow-col gap-4 flex-wrap justify-center">
+          <a className="link link-hover text-sm md:text-base">About</a>
+          <a className="link link-hover text-sm md:text-base">Contact</a>
+          <a className="link link-hover text-sm md:text-base">Privacy Policy</a>
+                    <a className="link link-hover text-sm md:text-base">Terms of Service</a>
+          <a className="link link-hover text-sm md:text-base">Support</a>
         </div>
         <div>
           <div className="grid grid-flow-col gap-4">
@@ -421,7 +311,7 @@ const LandingPage = () => {
             <MessageCircle className="w-6 h-6 text-primary" />
             <span className="font-bold text-xl">Chatty</span>
           </div>
-          <p className="mt-2">© 2024 Chatty. All rights reserved.</p>
+          <p className="mt-2 text-sm md:text-base">© 2024 Chatty. All rights reserved.</p>
         </div>
       </footer>
     </div>

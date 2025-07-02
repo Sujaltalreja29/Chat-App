@@ -90,7 +90,7 @@ const ProfilePage = () => {
                 <div className="flex flex-col items-center mb-6">
                   <div className="relative group">
                     <img
-                      src={"/avatar.png"}
+                      src={authUser.profilePic || "/avatar.png"}
                       alt="Profile"
                       className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover border-4 border-base-300"
                     />
@@ -196,7 +196,7 @@ const ProfilePage = () => {
           <div className="space-y-4">
             
             {/* Account Status */}
-            <div className="card bg-base-100 shadow-sm">
+            {/* <div className="card bg-base-100 shadow-sm">
               <div className="card-body p-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-primary" />
@@ -221,7 +221,7 @@ const ProfilePage = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Account Details */}
             <div className="card bg-base-100 shadow-sm">
@@ -235,7 +235,7 @@ const ProfilePage = () => {
                   <div>
                     <span className="text-sm text-base-content/70">Member Since</span>
                     <p className="text-sm font-medium">
-                      {authUser?.createdAt ? formatDate(authUser.createdAt) : 'N/A'}
+                      {authUser ? formatDate(authUser.createdAt) : 'N/A'}
                     </p>
                   </div>
                   

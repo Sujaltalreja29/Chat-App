@@ -11,7 +11,7 @@ import { useEffect, useState, useRef } from "react";
 const Navbar = () => {
   const { logout, authUser } = useAuthStore();
   const { pendingRequests, getPendingRequests } = useFriendStore();
-  const { isMobile, isTablet, showMobileLayout } = useResponsive();
+  const { isMobile, showMobileLayout } = useResponsive();
   const location = useLocation();
   
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -20,6 +20,7 @@ const Navbar = () => {
   
   const totalRequests = pendingRequests.received?.length || 0;
   const isHomePage = location.pathname === '/';
+  const isLandingPage = location.pathname === '/landing'; 
 
   useEffect(() => {
     if (authUser) {
@@ -47,10 +48,17 @@ const Navbar = () => {
     };
   }, []);
 
-  const shouldShowMinimalNavbar = showMobileLayout && isHomePage;
+    const getNavbarClass = () => {
+    if (isLandingPage) {
+      return "bg-base-100/90 border-b border-base-300 fixed w-full top-0 z-navbar backdrop-blur-lg py-2";
+    }
+    return "bg-base-100 border-b border-base-300 fixed w-full top-0 z-navbar backdrop-blur-lg py-2";
+  };
+
+  const shouldShowMinimalNavbar = showMobileLayout && (isHomePage || isLandingPage);
 
   return (
-    <header className="bg-base-100 border-b border-base-300 fixed w-full top-0 z-navbar backdrop-blur-lg py-2">
+    <header className={getNavbarClass()}> {/* Use dynamic class */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`flex items-center justify-between ${
           shouldShowMinimalNavbar ? 'h-12' : 'h-16'
@@ -128,7 +136,7 @@ const Navbar = () => {
                         <div className="w-8 h-8 rounded-full ring ring-base-300 ring-offset-2 ring-offset-base-100">
                           {authUser.profilePic ? (
                             <img 
-                              src={"avatar.png"} 
+                              src={authUser.profilePic || "avatar.png"} 
                               alt={authUser.fullName}
                               className="w-full h-full object-cover"
                             />
@@ -157,7 +165,7 @@ const Navbar = () => {
                               <div className="w-10 h-10 rounded-full ring ring-base-300 ring-offset-1 ring-offset-base-100">
                                 {authUser.profilePic ? (
                                   <img 
-                                    src={"avatar.png"} 
+                                    src={authUser.profilePic || "avatar.png"} 
                                     alt={authUser.fullName}
                                     className="w-full h-full object-cover"
                                   />
@@ -211,6 +219,7 @@ const Navbar = () => {
                 </>
               ) : (
                 <div className="flex items-center gap-3">
+                  <Link to="/settings" className="btn btn-ghost">Settings</Link>
                   <Link to="/login" className="btn btn-ghost">Sign in</Link>
                   <Link to="/signup" className="btn btn-primary">Get Started</Link>
                 </div>
@@ -227,7 +236,7 @@ const Navbar = () => {
                   <div className="w-8 h-8 rounded-full ring ring-base-300 ring-offset-1 ring-offset-base-100">
                     {authUser.profilePic ? (
                       <img 
-                        src={"avatar.png"} 
+                        src={authUser.profilePic || "avatar.png"} 
                         alt={authUser.fullName}
                         className="w-full h-full object-cover"
                       />
@@ -257,6 +266,7 @@ const Navbar = () => {
           {/* Mobile Sign In/Up */}
           {showMobileLayout && !authUser && (
             <div className="flex items-center gap-2">
+              <Link to="/settings" className="btn btn-ghost btn-sm">Settings</Link>
               <Link to="/login" className="btn btn-ghost btn-sm">Sign in</Link>
               <Link to="/signup" className="btn btn-primary btn-sm">Sign up</Link>
             </div>
@@ -274,7 +284,7 @@ const Navbar = () => {
                 <div className="w-12 h-12 rounded-full ring ring-base-300 ring-offset-2 ring-offset-base-200">
                   {authUser.profilePic ? (
                     <img 
-                      src={"avatar.png"} 
+                      src={authUser.profilePic || "avatar.png"} 
                       alt={authUser.fullName}
                       className="w-full h-full object-cover"
                     />

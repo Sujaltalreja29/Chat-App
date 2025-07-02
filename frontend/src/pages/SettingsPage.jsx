@@ -11,7 +11,7 @@ const SettingsPage = () => {
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
-  };
+  };  
 
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme);
@@ -139,7 +139,7 @@ const SettingsPage = () => {
             </div>
 
             {/* Display Settings */}
-            <div className="card bg-base-100 shadow-sm">
+            {/* <div className="card bg-base-100 shadow-sm">
               <div className="card-body p-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <Monitor className="w-4 h-4 text-primary" />
@@ -163,7 +163,7 @@ const SettingsPage = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* App Info */}
             <div className="card bg-primary/10 border border-primary/20 shadow-sm">
@@ -175,10 +175,10 @@ const SettingsPage = () => {
                     <span className="text-base-content/70">Version</span>
                     <span className="font-medium">1.0.0</span>
                   </div>
-                  <div className="flex justify-between">
+                  {/* <div className="flex justify-between">
                     <span className="text-base-content/70">Updated</span>
                     <span className="font-medium">Today</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>

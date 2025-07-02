@@ -1,4 +1,4 @@
-// src/App.jsx - Fixed with proper auth redirects and landing page routing
+// src/App.jsx - Updated to show navbar on landing page
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Loader, MessageSquare } from "lucide-react";
@@ -83,23 +83,28 @@ const App = () => {
       </div>
     );
 
-  // Helper to determine if current page should show navbar
-  const shouldShowNavbar = () => {
-    const noNavbarPages = ['/landing'];
-    return !noNavbarPages.includes(location.pathname);
-  };
-
   // Get main content padding based on route and auth status
   const getMainPadding = () => {
-    if (!authUser) return '';
-    
     // HomePage gets NO padding - navbar will be absolute/fixed positioned
     if (location.pathname === '/') {
       return '';
     }
     
-    // Other authenticated pages get normal navbar height
+    // Landing page gets NO padding - navbar will be fixed positioned
+    if (location.pathname === '/landing') {
+      return '';
+    }
+    
+    // Other pages get normal navbar height
     return showMobileLayout ? 'pt-16' : 'pt-20';
+  };
+
+  // Determine navbar positioning
+  const getNavbarPositioning = () => {
+    if (location.pathname === '/' || location.pathname === '/landing') {
+      return 'absolute top-0 left-0 right-0 z-50';
+    }
+    return 'relative';
   };
 
   return (
@@ -110,16 +115,14 @@ const App = () => {
       >
         <ThemeProvider />
         
-        {/* Conditional Navbar rendering */}
-        {shouldShowNavbar() && (
-          <div className={location.pathname === '/' ? 'absolute top-0 left-0 right-0 z-50' : 'relative'}>
-            <Navbar />
-          </div>
-        )}
+        {/* Always show Navbar */}
+        <div className={getNavbarPositioning()}>
+          <Navbar />
+        </div>
 
         <div className={getMainPadding()}>
           <Routes>
-            {/* 🆕 Landing page as default for non-authenticated users */}
+            {/* Landing page as default for non-authenticated users */}
             <Route 
               path="/landing" 
               element={!authUser ? <LandingPage /> : <Navigate to="/" />} 
@@ -142,7 +145,7 @@ const App = () => {
             />
             <Route 
               path="/settings" 
-              element={authUser ? <SettingsPage /> : <Navigate to="/landing" />} 
+              element={<SettingsPage />} 
             />
             <Route 
               path="/friends" 
