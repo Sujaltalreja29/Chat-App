@@ -4,6 +4,11 @@ import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
+import fs from "fs/promises";
+
+const cleanupGroupUpload = async (file) => {
+  if (file?.path) await fs.unlink(file.path).catch(() => {});
+};
 
 export const createGroup = async (req, res) => {
   try {
@@ -37,6 +42,7 @@ export const createGroup = async (req, res) => {
     if (req.file) {
       const uploadResponse = await cloudinary.uploader.upload(req.file.path);
       groupPicUrl = uploadResponse.secure_url;
+      await cleanupGroupUpload(req.file);
     }
 
     // Create group with creator as admin
@@ -86,6 +92,7 @@ export const createGroup = async (req, res) => {
     res.status(201).json(newGroup);
   } catch (error) {
     console.error("Error in createGroup: ", error.message);
+    await cleanupGroupUpload(req.file);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -150,7 +157,10 @@ export const addMember = async (req, res) => {
       member.user.toString() === currentUserId.toString()
     );
 
-    if (!currentMember) {
+    const requestedUserIds = Array.isArray(userIds) ? userIds : [userIds];
+    const isSelfJoin = requestedUserIds.length === 0 || !requestedUserIds[0];
+
+    if (!currentMember && !(isSelfJoin && !group.settings.isPrivate)) {
       return res.status(403).json({ error: "Not a member of this group" });
     }
 
@@ -159,7 +169,7 @@ export const addMember = async (req, res) => {
     }
 
     // Validate users and check if they're friends (for private groups)
-    const usersToAdd = Array.isArray(userIds) ? userIds : [userIds];
+    const usersToAdd = isSelfJoin ? [currentUserId.toString()] : requestedUserIds;
     const existingMemberIds = group.members.map(member => member.user.toString());
     
     // Filter out users already in group
@@ -482,6 +492,7 @@ export const updateGroup = async (req, res) => {
     if (req.file) {
       const uploadResponse = await cloudinary.uploader.upload(req.file.path);
       groupPicUrl = uploadResponse.secure_url;
+      await cleanupGroupUpload(req.file);
     }
 
     // Update group
@@ -519,6 +530,7 @@ export const updateGroup = async (req, res) => {
     res.status(200).json(updatedGroup);
   } catch (error) {
     console.error("Error in updateGroup: ", error.message);
+    await cleanupGroupUpload(req.file);
     res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Loader2, Lock, Mail, MessageCircle, ArrowRight, Users } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail, MessageCircle, ArrowRight, Users, Play } from "lucide-react";
 import { GoogleLogin } from '@react-oauth/google';
 import toast from "react-hot-toast";
 
@@ -12,7 +12,7 @@ const LoginPage = () => {
     email: "",
     password: "",
   });
-  const { login, loginWithGoogle, isLoggingIn } = useAuthStore();
+  const { login, demoLogin, loginWithGoogle, isLoggingIn } = useAuthStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -146,6 +146,16 @@ const LoginPage = () => {
                       logo_alignment="left"
                     />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={demoLogin}
+                    disabled={isLoggingIn}
+                    className="btn btn-outline w-full gap-2"
+                  >
+                    <Play className="h-4 w-4" />
+                    {isLoggingIn ? "Opening demo..." : "Try the live demo"}
+                  </button>
 
                   {/* Divider */}
                   <div className="divider my-6 text-base-content/50">or continue with email</div>

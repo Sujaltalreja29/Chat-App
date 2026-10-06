@@ -1,9 +1,8 @@
 // src/components/MessageInput.jsx
 import { useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
-import { useResponsive } from "../hooks/useResponsive";
 import { useVirtualKeyboard } from "../hooks/useKeyboard";
-import { Paperclip, Send, X, Smile, Mic } from "lucide-react";
+import { Paperclip, Send, X, Mic } from "lucide-react";
 import toast from "react-hot-toast";
 import FileUpload from "./FileUpload";
 import VoiceRecorder from "./VoiceRecorder"; // 🆕 Import VoiceRecorder
@@ -19,7 +18,6 @@ const MessageInput = ({ isMobile = false }) => {
   const fileInputRef = useRef(null);
   const textAreaRef = useRef(null);
   
-  const { isSmallMobile } = useResponsive();
   const { isKeyboardOpen } = useVirtualKeyboard();
   
   const { 
@@ -94,7 +92,7 @@ const MessageInput = ({ isMobile = false }) => {
   };
 
   const handleTextChange = (e) => {
-    const newText = e.target.value;
+    const newText = e.target.value.slice(0, 5000);
     setText(newText);
     
     if (newText.trim()) {
@@ -226,6 +224,7 @@ const MessageInput = ({ isMobile = false }) => {
               onKeyPress={handleKeyPress}
               onBlur={handleBlur}
               placeholder="Type a message..."
+              maxLength={5000}
               className={`flex-1 bg-transparent border-0 outline-none resize-none text-base-content placeholder-base-content/50 max-h-32 leading-relaxed input-mobile ${
                 isMobile 
                   ? 'px-3 py-2.5 text-sm min-h-[40px]' 
@@ -274,19 +273,6 @@ const MessageInput = ({ isMobile = false }) => {
                 </button>
               )}
 
-              {/* Emoji Button - Show when text exists or not small mobile */}
-              {(text.trim() || !isSmallMobile) && !(!text.trim() && audioSupported && isMobile) && (
-                <button
-                  type="button"
-                  className={`btn btn-ghost btn-circle touch-manipulation ${
-                    isMobile ? 'btn-sm' : 'btn-sm'
-                  }`}
-                  title="Add emoji"
-                  disabled={isUploading}
-                >
-                  <Smile className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -316,7 +302,7 @@ const MessageInput = ({ isMobile = false }) => {
       </form>
 
       {/* Status/Tips */}
-      <div className="mt-2 text-center">
+      <div className="mt-2 flex items-center justify-between gap-2">
         {isUploading ? (
           <p className={`text-primary ${isMobile ? 'text-xs' : 'text-xs'}`}>
             Uploading...
@@ -331,6 +317,7 @@ const MessageInput = ({ isMobile = false }) => {
             }
           </p>
         )}
+        <span className="ml-auto text-xs text-base-content/50">{text.length}/5000</span>
       </div>
     </div>
   );

@@ -2,15 +2,17 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
 import { useFriendStore } from "../store/useFriendStore";
+import { useChatStore } from "../store/useChatStore";
 import { useResponsive } from "../hooks/useResponsive";
 import { 
-  LogOut, MessageSquare, Settings, User, Users, Hash, Menu, X, ChevronDown
+  LogOut, MessageSquare, Settings, User, Users, Hash, Menu, X, ChevronDown, ArrowLeftRight
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 const Navbar = () => {
-  const { logout, authUser } = useAuthStore();
+  const { logout, authUser, switchDemoAccount, isLoggingIn } = useAuthStore();
   const { pendingRequests, getPendingRequests } = useFriendStore();
+  const { clearChat, getUsers, getGroups } = useChatStore();
   const { isMobile, showMobileLayout } = useResponsive();
   const location = useLocation();
   
@@ -21,6 +23,17 @@ const Navbar = () => {
   const totalRequests = pendingRequests.received?.length || 0;
   const isHomePage = location.pathname === '/';
   const isLandingPage = location.pathname === '/landing'; 
+  const isDemoAccount = authUser?.email === 'demo@chatty.app' || authUser?.email === 'alex@chatty.app';
+  const nextDemoAccount = authUser?.email === 'alex@chatty.app' ? 'demo' : 'companion';
+  const nextDemoLabel = nextDemoAccount === 'companion' ? 'Switch to Alex' : 'Switch to Chatty Demo';
+
+  const handleDemoSwitch = async () => {
+    const didSwitch = await switchDemoAccount(nextDemoAccount);
+    if (didSwitch) {
+      clearChat();
+      await Promise.all([getUsers(), getGroups()]);
+    }
+  };
 
   useEffect(() => {
     if (authUser) {
@@ -202,6 +215,20 @@ const Navbar = () => {
 
                           <div className="divider my-2 mx-4"></div>
 
+                          {isDemoAccount && (
+                            <button
+                              onClick={() => {
+                                handleDemoSwitch();
+                                setShowAvatarDropdown(false);
+                              }}
+                              disabled={isLoggingIn}
+                              className="flex items-center gap-3 px-4 py-2 hover:bg-primary/10 text-primary transition-colors w-full"
+                            >
+                              <ArrowLeftRight className="w-4 h-4" />
+                              <span className="font-medium">{nextDemoLabel}</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => {
                               logout();
@@ -366,6 +393,20 @@ const Navbar = () => {
 
               {/* Divider */}
               <div className="divider my-2"></div>
+
+              {isDemoAccount && (
+                <button
+                  onClick={() => {
+                    handleDemoSwitch();
+                    setShowMobileMenu(false);
+                  }}
+                  disabled={isLoggingIn}
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-primary/10 text-primary transition-colors w-full"
+                >
+                  <ArrowLeftRight className="w-5 h-5" />
+                  <span className="font-medium">{nextDemoLabel}</span>
+                </button>
+              )}
 
               {/* Logout */}
               <button

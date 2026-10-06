@@ -179,7 +179,7 @@ const SearchResults = ({ onResultClick, onClose }) => {
                 {/* Message Content */}
                 <div className="pl-6">
                   {/* File Preview */}
-                  {message.file && (
+                  {message.file && (message.file.url || message.file.originalName || message.file.fileType || message.file.mimeType) && (
                     <div className="mb-2">
                       <FileMessage 
                         file={message.file} 

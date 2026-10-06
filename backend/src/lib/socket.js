@@ -4,7 +4,10 @@ import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173")
+  .split(",")
+  .map(origin => origin.trim())
+  .filter(Boolean);
 const app = express();
 const server = http.createServer(app);
 
@@ -16,11 +19,12 @@ const io = new Server(server, {
 });
 
 export function getReceiverSocketId(userId) {
-  return userSocketMap[userId];
+  const sockets = userSocketMap[userId];
+  return sockets ? Array.from(sockets)[0] : undefined;
 }
 
 // Store online users and typing states
-const userSocketMap = {}; // {userId: socketId}
+const userSocketMap = {}; // {userId: Set<socketId>}
 const typingUsers = new Map(); // {chatId: Set of typing users}
 
 // 🔥 NEW: Helper function to get typing users for a chat
@@ -89,7 +93,8 @@ io.on("connection", (socket) => {
 
   const userId = socket.handshake.query.userId;
   if (userId) {
-    userSocketMap[userId] = socket.id;
+    if (!userSocketMap[userId]) userSocketMap[userId] = new Set();
+    userSocketMap[userId].add(socket.id);
     
     // 🔥 NEW: Join user to their groups for group typing
     // We'll implement this when handling group joining
@@ -149,7 +154,10 @@ io.on("connection", (socket) => {
       cleanupTyping(userId);
     }
     
-    delete userSocketMap[userId];
+    if (userId && userSocketMap[userId]) {
+      userSocketMap[userId].delete(socket.id);
+      if (userSocketMap[userId].size === 0) delete userSocketMap[userId];
+    }
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 });

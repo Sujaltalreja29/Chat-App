@@ -81,9 +81,12 @@ export const useChatStore = create((set, get) => ({
 
   // 🔥 UPDATED: Enhanced getFriends with message info
   getFriends: async () => {
+    const requestedUserId = useAuthStore.getState().authUser?._id;
     set({ isUsersLoading: true });
     try {
       const res = await axiosInstance.get("/messages/users");
+      const currentUserId = useAuthStore.getState().authUser?._id;
+      if (String(currentUserId) !== String(requestedUserId)) return;
       set({ users: res.data });
       get().calculateTotalUnreadCount();
     } catch (error) {
@@ -102,9 +105,12 @@ export const useChatStore = create((set, get) => ({
 
   // 🔥 UPDATED: Enhanced getGroups with message info
   getGroups: async () => {
+    const requestedUserId = useAuthStore.getState().authUser?._id;
     set({ isGroupsLoading: true });
     try {
       const res = await axiosInstance.get("/messages/groups/sidebar");
+      const currentUserId = useAuthStore.getState().authUser?._id;
+      if (String(currentUserId) !== String(requestedUserId)) return;
       set({ groups: res.data });
       get().calculateTotalUnreadCount();
     } catch (error) {
@@ -476,7 +482,7 @@ export const useChatStore = create((set, get) => ({
         const { selectedUser, chatType } = get();
         const senderId = typeof newMessage.senderId === 'string' ? newMessage.senderId : newMessage.senderId._id;
 
-        const isFromSelectedUser = selectedUser && selectedUser._id === senderId;
+        const isFromSelectedUser = selectedUser && String(selectedUser._id) === String(senderId);
 
         if (chatType === 'direct' && isFromSelectedUser) {
           console.log("📥 Adding message to current chat");
@@ -498,7 +504,7 @@ export const useChatStore = create((set, get) => ({
 
         console.log("📥 Received new group message:", newMessage);
         const { selectedGroup, chatType } = get();
-        const isFromSelectedGroup = selectedGroup && newMessage.groupId === selectedGroup._id;
+        const isFromSelectedGroup = selectedGroup && String(newMessage.groupId) === String(selectedGroup._id);
 
         if (chatType === 'group' && isFromSelectedGroup) {
           console.log("📥 Adding group message to current chat");
@@ -600,13 +606,15 @@ export const useChatStore = create((set, get) => ({
       socket.on("groupMemberLeft", (data) => {
         const { groups } = get();
         const updatedGroups = groups.map(group =>
-          group._id === data.group._id ? data.group : group
+          String(group._id) === String(data.groupId)
+            ? { ...group, members: group.members?.filter(member => String(member.user?._id || member.user) !== String(data.leftUserId)) }
+            : group
         );
         set({ groups: updatedGroups });
 
         const { selectedGroup } = get();
-        if (selectedGroup && selectedGroup._id === data.group._id) {
-          set({ selectedGroup: data.group });
+        if (selectedGroup && String(selectedGroup._id) === String(data.groupId)) {
+          set({ selectedGroup: updatedGroups.find(group => String(group._id) === String(data.groupId)) });
         }
       });
 
@@ -620,14 +628,20 @@ export const useChatStore = create((set, get) => ({
 
       socket.on("groupMemberRoleChanged", (data) => {
         const { groups, selectedGroup } = get();
-        if (selectedGroup && selectedGroup._id === data.group._id) {
-          set({ selectedGroup: data.group });
-        }
-
         const updatedGroups = groups.map(group =>
-          group._id === data.group._id ? data.group : group
+          String(group._id) === String(data.groupId)
+            ? { ...group, members: group.members?.map(member =>
+              String(member.user?._id || member.user) === String(data.userId)
+                ? { ...member, role: data.newRole }
+                : member
+            ) }
+            : group
         );
         set({ groups: updatedGroups });
+
+        if (selectedGroup && String(selectedGroup._id) === String(data.groupId)) {
+          set({ selectedGroup: updatedGroups.find(group => String(group._id) === String(data.groupId)) });
+        }
       });
     };
 
@@ -683,7 +697,7 @@ export const useChatStore = create((set, get) => ({
     console.log("🔔 DEBUG: Sender ID:", senderId);
 
     // Don't create notification for own messages
-    if (senderId === authUser._id) {
+    if (String(senderId) === String(authUser._id)) {
       console.log("🔔 DEBUG: Ignoring own message");
       return;
     }
@@ -694,7 +708,7 @@ export const useChatStore = create((set, get) => ({
       console.log("🔔 DEBUG: Current users:", users.length);
 
       const updatedUsers = users.map(user => {
-        if (user._id === senderId) {
+        if (String(user._id) === String(senderId)) {
           console.log("🔔 DEBUG: Updating user:", user.fullName);
           return {
             ...user,
@@ -712,8 +726,12 @@ export const useChatStore = create((set, get) => ({
         return new Date(bTime) - new Date(aTime);
       });
 
+      const conversationKey = [String(senderId), String(authUser._id)].sort().join('-');
+      const updatedMessageCache = new Map(get().messageCache);
+      updatedMessageCache.delete(`${conversationKey}-direct`);
+
       console.log("🔔 DEBUG: Setting updated users");
-      set({ users: updatedUsers });
+      set({ users: updatedUsers, messageCache: updatedMessageCache });
 
     } else if (type === 'group') {
       console.log("🔔 DEBUG: Processing group message notification");
@@ -721,7 +739,7 @@ export const useChatStore = create((set, get) => ({
       const groupId = message.groupId;
 
       const updatedGroups = groups.map(group => {
-        if (group._id === groupId) {
+        if (String(group._id) === String(groupId)) {
           console.log("🔔 DEBUG: Updating group:", group.name);
           return {
             ...group,
@@ -739,8 +757,11 @@ export const useChatStore = create((set, get) => ({
         return new Date(bTime) - new Date(aTime);
       });
 
+      const updatedMessageCache = new Map(get().messageCache);
+      updatedMessageCache.delete(`${groupId}-group`);
+
       console.log("🔔 DEBUG: Setting updated groups");
-      set({ groups: updatedGroups });
+      set({ groups: updatedGroups, messageCache: updatedMessageCache });
     }
 
     console.log("🔔 DEBUG: Calculating total unread count");
@@ -797,8 +818,27 @@ export const useChatStore = create((set, get) => ({
     });
 
     if (selectedUser) {
-      get().getMessages(selectedUser._id, 'direct');
+      get().getMessages(selectedUser._id, 'direct', 1, false);
     }
+  },
+
+  resetForAuthChange: () => {
+    get().stopTyping();
+    set({
+      messages: [],
+      users: [],
+      groups: [],
+      selectedUser: null,
+      selectedGroup: null,
+      chatType: 'direct',
+      typingUsers: [],
+      isUserTyping: false,
+      hasMoreMessages: true,
+      messagesPage: 1,
+      messageCache: new Map(),
+      totalUnreadCount: 0,
+      unreadCounts: { direct: [], group: [] }
+    });
   },
 
   setSelectedGroup: (selectedGroup) => {
@@ -810,7 +850,7 @@ export const useChatStore = create((set, get) => ({
     });
 
     if (selectedGroup) {
-      get().getMessages(selectedGroup._id, 'group');
+      get().getMessages(selectedGroup._id, 'group', 1, false);
     }
   },
 

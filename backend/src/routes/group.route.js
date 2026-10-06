@@ -1,6 +1,6 @@
 import express from "express";
-import multer from "multer";
 import { protectRoute } from "../middleware/auth.middleware.js";
+import { upload, handleFileUploadError } from "../middleware/fileUpload.middleware.js";
 import {
   createGroup,
   getMyGroups,
@@ -17,13 +17,12 @@ import {
 } from "../controllers/group.controller.js";
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
-
 // Group CRUD
-router.post("/create", protectRoute, upload.single("groupPic"), createGroup);
+router.post("/create", protectRoute, upload.single("groupPic"), handleFileUploadError, createGroup);
 router.get("/my-groups", protectRoute, getMyGroups);
+router.get("/search", protectRoute, searchGroups);
 router.get("/:groupId", protectRoute, getGroupDetails);
-router.put("/:groupId", protectRoute, upload.single("groupPic"), updateGroup);
+router.put("/:groupId", protectRoute, upload.single("groupPic"), handleFileUploadError, updateGroup);
 router.delete("/:groupId", protectRoute, deleteGroup);
 
 // Member Management
@@ -35,8 +34,5 @@ router.put("/:groupId/members/:userId/role", protectRoute, updateMemberRole);
 // Group Messages
 router.get("/:groupId/messages", protectRoute, getGroupMessages);
 router.get("/:groupId/messages/before", protectRoute, getGroupMessagesBefore); // 🔥 NEW
-
-// Search
-router.get("/search", protectRoute, searchGroups);
 
 export default router;

@@ -9,7 +9,14 @@ export const formatLastMessage = (lastMessage, isGroup = false, authUserId = nul
   let messageContent = '';
   
   // Handle file uploads
-  if (lastMessage.file) {
+  const hasFileData = lastMessage.file && (
+    lastMessage.file.url ||
+    lastMessage.file.originalName ||
+    lastMessage.file.fileType ||
+    lastMessage.file.mimeType
+  );
+
+  if (hasFileData) {
     const fileInfo = getFileDisplayInfo(lastMessage.file.fileType);
     const fileName = lastMessage.file.originalName;
     

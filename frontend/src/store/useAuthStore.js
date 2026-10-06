@@ -4,12 +4,11 @@ import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 
-const BASE_URL = import.meta.env.MODE === "development" ? "http://localhost:5001" : "http://localhost:5001";
-
 export const useAuthStore = create((set, get) => ({
   authUser: null,
   isSigningUp: false,
   isLoggingIn: false,
+  isResettingDemo: false,
   isUpdatingProfile: false,
   isCheckingAuth: true,
   onlineUsers: [],
@@ -73,6 +72,51 @@ export const useAuthStore = create((set, get) => ({
       toast.error(error.response?.data?.message || "Login failed");
     } finally {
       set({ isLoggingIn: false });
+    }
+  },
+
+  demoLogin: async () => {
+    set({ isLoggingIn: true });
+    try {
+      const res = await axiosInstance.post("/auth/demo-login");
+      set({ authUser: res.data });
+      toast.success("Welcome to the live demo");
+      get().connectSocket();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Demo login failed");
+    } finally {
+      set({ isLoggingIn: false });
+    }
+  },
+
+  switchDemoAccount: async (account) => {
+    set({ isLoggingIn: true });
+    try {
+      const res = await axiosInstance.post("/auth/demo-login", { account });
+      get().disconnectSocket();
+      set({ authUser: res.data });
+      toast.success(`Switched to ${res.data.fullName}`);
+      get().connectSocket();
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not switch demo account");
+      return false;
+    } finally {
+      set({ isLoggingIn: false });
+    }
+  },
+
+  resetDemo: async () => {
+    set({ isResettingDemo: true });
+    try {
+      await axiosInstance.post("/auth/demo-reset");
+      toast.success("Demo restored to its starting state");
+      return true;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not reset the demo");
+      return false;
+    } finally {
+      set({ isResettingDemo: false });
     }
   },
 

@@ -28,13 +28,17 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers, socket } = useAuthStore();
   const { getMyGroups } = useGroupStore();
-  const { getGroups, subscribeToMessages, unsubscribeFromMessages } = useChatStore();
+  const { getGroups, resetForAuthChange, subscribeToMessages, unsubscribeFromMessages } = useChatStore();
   const { subscribeToFriendRequests, unsubscribeFromFriendRequests } = useFriendStore();
   const { theme } = useThemeStore();
   const location = useLocation();
   
   // Responsive data
   const { showMobileLayout } = useResponsive();
+
+  useEffect(() => {
+    resetForAuthChange();
+  }, [authUser?._id, resetForAuthChange]);
 
   useEffect(() => {
     if (authUser) {
@@ -145,7 +149,7 @@ const App = () => {
             />
             <Route 
               path="/settings" 
-              element={<SettingsPage />} 
+              element={authUser ? <SettingsPage /> : <Navigate to="/landing" />}
             />
             <Route 
               path="/friends" 

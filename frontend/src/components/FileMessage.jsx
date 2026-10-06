@@ -25,6 +25,10 @@ const FileMessage = ({ file, isOwn, isMobile = false }) => {
     isLoading
   } = useAudioPlayer(file?.fileType === 'voice' ? file?.url : null);
 
+  if (!file || (!file.url && !file.originalName && !file.fileType && !file.mimeType)) {
+    return null;
+  }
+
   // Format file size
   const formatFileSize = (bytes) => {
     if (!bytes) return '0 Bytes';
@@ -265,7 +269,7 @@ const FileMessage = ({ file, isOwn, isMobile = false }) => {
           {file.originalName}
         </p>
         <p className="text-xs text-base-content/60">
-          {formatFileSize(file.fileSize)} • {file.mimeType.split('/')[1].toUpperCase()}
+          {formatFileSize(file.fileSize)} • {(file.mimeType || 'application/octet-stream').split('/')[1]?.toUpperCase() || 'FILE'}
         </p>
       </div>
 

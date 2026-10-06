@@ -25,6 +25,11 @@ export const sendVoiceNote = async (req, res) => {
   try {
     const { receiverId } = req.params;
     const senderId = req.user._id;
+
+    const canMessage = await User.exists({ _id: senderId, friends: receiverId });
+    if (!canMessage) {
+      return res.status(403).json({ error: "You can only message friends" });
+    }
     const audioFile = req.file;
     const { duration, waveform } = req.body;
 

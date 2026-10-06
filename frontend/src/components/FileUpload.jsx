@@ -23,16 +23,20 @@ const FileUpload = ({ onFileSelect, onRemove, selectedFile, filePreview }) => {
     const allowedTypes = [
       // Images
       'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'image/jpg', 'image/bmp', 'image/tiff',
       // Documents
       'application/pdf', 'application/msword', 
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/plain',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain', 'text/csv', 'application/rtf',
       // Videos
       'video/mp4', 'video/quicktime', 'video/x-msvideo',
+      'video/webm', 'video/ogg',
       // Audio
-      'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4'
+      'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac', 'audio/webm'
     ];
 
     if (file.size > maxSize) {
@@ -81,6 +85,13 @@ const FileUpload = ({ onFileSelect, onRemove, selectedFile, filePreview }) => {
     onDragEnter: () => setIsDragActive(true),
     onDragLeave: () => setIsDragActive(false),
     multiple: false,
+    accept: {
+      'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff'],
+      'video/*': ['.mp4', '.mov', '.avi', '.webm', '.ogg'],
+      'audio/*': ['.mp3', '.wav', '.ogg', '.mp4', '.aac', '.webm'],
+      'application/*': ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.rtf'],
+      'text/*': ['.txt', '.csv']
+    },
     disabled: !!selectedFile || isProcessing,
     noClick: true, // We'll handle click manually
     noKeyboard: true

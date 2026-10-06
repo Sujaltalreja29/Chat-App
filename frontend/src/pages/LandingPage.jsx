@@ -1,6 +1,7 @@
 // pages/LandingPage.jsx - Updated with proper spacing and mobile responsiveness
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useAuthStore } from "../store/useAuthStore";
 import { 
   MessageCircle, 
   Users, 
@@ -24,6 +25,7 @@ import {
 
 const LandingPage = () => {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const { demoLogin, isLoggingIn } = useAuthStore();
 
   // Auto-rotate testimonials
   useEffect(() => {
@@ -137,6 +139,15 @@ const LandingPage = () => {
                   Start Chatting
                   <ArrowRight className="w-5 h-5" />
                 </Link>
+                <button
+                  type="button"
+                  onClick={demoLogin}
+                  disabled={isLoggingIn}
+                  className="btn btn-outline btn-lg gap-2 rounded-full text-base md:text-lg px-8 py-4 h-auto min-h-[3.5rem]"
+                >
+                  {isLoggingIn ? "Opening demo..." : "Try live demo"}
+                  {!isLoggingIn && <Play className="w-5 h-5" />}
+                </button>
               </div>
 
               {/* Demo Preview - Enhanced mobile responsiveness */}

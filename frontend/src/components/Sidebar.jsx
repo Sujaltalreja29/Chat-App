@@ -99,7 +99,14 @@ useEffect(() => {
     
     let messageText = '';
     
-    if (lastMessage.file) {
+    const hasFileData = lastMessage.file && (
+      lastMessage.file.url ||
+      lastMessage.file.originalName ||
+      lastMessage.file.fileType ||
+      lastMessage.file.mimeType
+    );
+
+    if (hasFileData) {
       const fileType = lastMessage.file.fileType;
       const fileName = lastMessage.file.originalName;
       

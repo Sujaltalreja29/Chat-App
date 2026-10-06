@@ -1,6 +1,7 @@
 // controllers/auth.controller.js - With Google Auth
 import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
+import Message from "../models/message.model.js";
 import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 import { OAuth2Client } from 'google-auth-library';
@@ -257,11 +258,136 @@ export const login = async (req, res) => {
   }
 };
 
+export const demoLogin = async (req, res) => {
+  try {
+    const { account } = req.body || {};
+    const demoEmail = "demo@chatty.app";
+    const demoPassword = "chatty-demo-account";
+    const companionEmail = "alex@chatty.app";
+    const hashedPassword = await bcrypt.hash(demoPassword, 12);
+
+    const demoUser = await User.findOneAndUpdate(
+      { email: demoEmail },
+      {
+        $setOnInsert: {
+          email: demoEmail,
+          fullName: "Chatty Demo",
+          password: hashedPassword,
+          profilePic: "https://randomuser.me/api/portraits/lego/1.jpg",
+          isGoogleUser: false,
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    const companionUser = await User.findOneAndUpdate(
+      { email: companionEmail },
+      {
+        $setOnInsert: {
+          email: companionEmail,
+          fullName: "Alex Morgan",
+          password: hashedPassword,
+          profilePic: "https://randomuser.me/api/portraits/men/32.jpg",
+          isGoogleUser: false,
+        },
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    await Promise.all([
+      User.updateOne(
+        { _id: demoUser._id },
+        { $addToSet: { friends: companionUser._id } }
+      ),
+      User.updateOne(
+        { _id: companionUser._id },
+        { $addToSet: { friends: demoUser._id } }
+      ),
+    ]);
+
+    const existingConversation = await Message.exists({
+      messageType: "direct",
+      $or: [
+        { senderId: demoUser._id, receiverId: companionUser._id },
+        { senderId: companionUser._id, receiverId: demoUser._id },
+      ],
+    });
+
+    if (!existingConversation) {
+      await Message.create({
+        senderId: companionUser._id,
+        receiverId: demoUser._id,
+        text: "Welcome to the Chatty demo! Send me a message to try it out.",
+        messageType: "direct",
+        messageSubType: "text",
+        isRead: false,
+      });
+    }
+
+    const loginUser = account === "companion" ? companionUser : demoUser;
+    generateToken(loginUser._id, res);
+
+    res.status(200).json({
+      _id: loginUser._id,
+      fullName: loginUser.fullName,
+      email: loginUser.email,
+      profilePic: loginUser.profilePic,
+    });
+  } catch (error) {
+    console.error("Error in demo login:", error);
+    res.status(500).json({ message: "Demo login is temporarily unavailable." });
+  }
+};
+
+export const resetDemo = async (req, res) => {
+  try {
+    const demoUser = await User.findOne({ email: "demo@chatty.app" });
+    const companionUser = await User.findOne({ email: "alex@chatty.app" });
+
+    if (!demoUser || !companionUser) {
+      return res.status(404).json({ message: "Demo accounts are not available yet." });
+    }
+
+    await Promise.all([
+      User.updateOne(
+        { _id: demoUser._id },
+        { $set: { friends: [companionUser._id], friendRequests: { sent: [], received: [] } } }
+      ),
+      User.updateOne(
+        { _id: companionUser._id },
+        { $set: { friends: [demoUser._id], friendRequests: { sent: [], received: [] } } }
+      ),
+      Message.deleteMany({
+        messageType: "direct",
+        $or: [
+          { senderId: demoUser._id, receiverId: companionUser._id },
+          { senderId: companionUser._id, receiverId: demoUser._id },
+        ],
+      }),
+    ]);
+
+    await Message.create({
+      senderId: companionUser._id,
+      receiverId: demoUser._id,
+      text: "Welcome to the Chatty demo! Send me a message to try it out.",
+      messageType: "direct",
+      messageSubType: "text",
+      isRead: false,
+    });
+
+    res.status(200).json({ message: "Demo reset successfully" });
+  } catch (error) {
+    console.error("Error resetting demo:", error);
+    res.status(500).json({ message: "Could not reset the demo." });
+  }
+};
+
 // 🆕 Google Login
 export const googleLogin = async (req, res) => {
+  console.log("GOOGLE LOGIN ROUTE HIT");
   try {
     const { credential } = req.body;
-
+    console.log(req.body);
     if (!credential) {
       return res.status(400).json({ 
         message: "Google credential is required" 

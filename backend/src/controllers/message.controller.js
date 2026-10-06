@@ -148,6 +148,11 @@ export const getMessages = async (req, res) => {
     const { page = 1, limit = 50, before = null } = req.query;
     const myId = req.user._id;
 
+    const canMessage = await User.exists({ _id: myId, friends: userToChatId });
+    if (!canMessage) {
+      return res.status(403).json({ error: "You can only message friends" });
+    }
+
     console.log(`📜 Getting messages for direct chat: ${myId} <-> ${userToChatId}`);
     console.log(`📜 Pagination: page=${page}, limit=${limit}, before=${before}`);
 
@@ -214,6 +219,11 @@ export const getMessagesBefore = async (req, res) => {
     const { before, limit = 50 } = req.query;
     const myId = req.user._id;
 
+    const canMessage = await User.exists({ _id: myId, friends: userToChatId });
+    if (!canMessage) {
+      return res.status(403).json({ error: "You can only message friends" });
+    }
+
     if (!before) {
       return res.status(400).json({ error: "Before timestamp is required" });
     }
@@ -266,6 +276,15 @@ export const sendMessage = async (req, res) => {
     const { text } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
+
+    const canMessage = await User.exists({ _id: senderId, friends: receiverId });
+    if (!canMessage) {
+      return res.status(403).json({ error: "You can only message friends" });
+    }
+
+    if (text && text.length > 5000) {
+      return res.status(400).json({ error: "Message cannot exceed 5000 characters." });
+    }
 
     let fileData = null;
     let imageUrl = null; // Keep for backward compatibility

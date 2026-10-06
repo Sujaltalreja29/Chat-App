@@ -494,7 +494,7 @@ const ChatContainer = ({ onBackToSidebar, isMobile = false }) => {
                           }`}
                         >
                           {/* File Message Support */}
-                          {message.file && (
+                          {message.file && (message.file.url || message.file.originalName || message.file.fileType || message.file.mimeType) && (
                             <div className={message.text ? "mb-3" : ""}>
                               <FileMessage 
                                 file={message.file} 
